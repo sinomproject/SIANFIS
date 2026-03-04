@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi } from '@/services/api';
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Label, Select, Textarea, Badge } from '@/components/ui';
-import { Camera, MapPin, PenLine, Upload, Loader2, AlertTriangle, CheckCircle, X, Navigation, Building2, Radio, Calendar, Clock, IdCard, Settings, User, FileText, Phone } from 'lucide-react';
+import { Camera, MapPin, PenLine, Upload, Loader2, AlertTriangle, CheckCircle, X, Navigation, Building2, Radio, Calendar, Clock, IdCard, Settings, User, FileText, Phone, Sun, Moon } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -178,6 +178,9 @@ const PublicForm = () => {
   const [autoFitMap, setAutoFitMap] = useState(true);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   
+  // Theme state - true = dark mode (BG1.jpg), false = light mode (BG.jpg)
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  
   const [permissions, setPermissions] = useState({
     camera: null,
     location: null
@@ -315,7 +318,8 @@ const PublicForm = () => {
     const ctx = canvas.getContext('2d');
     let isDrawing = false;
 
-    ctx.strokeStyle = '#ffffff';
+    // Dynamic stroke color based on theme
+    ctx.strokeStyle = isDarkMode ? '#ffffff' : '#1f2937';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
 
@@ -375,7 +379,7 @@ const PublicForm = () => {
       canvas.removeEventListener('touchmove', draw);
       canvas.removeEventListener('touchend', stopDrawing);
     };
-  }, [isWithinZone]);
+  }, [isWithinZone, isDarkMode]);
 
   const startCamera = async () => {
     try {
@@ -682,33 +686,73 @@ const PublicForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 p-4 md:p-8 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 mesh-gradient opacity-30" />
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-primary-500/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent/20 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+    <>
+      {/* Fixed Background Wrapper */}
+      <div 
+        className="fixed inset-0 z-0 transition-opacity duration-700"
+        style={{
+          backgroundImage: `url('/assets/${isDarkMode ? 'BG1.jpg' : 'BG.jpg'}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+        }}
+      />
       
-      <div className="relative z-10 max-w-2xl mx-auto">
-        {/* Admin Login Button - Top Right */}
-        <div className="flex justify-end mb-6 print-hidden">
-          <button
-            onClick={() => navigate('/admin/login')}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all text-sm backdrop-blur-sm border border-white/10"
-          >
-            <Settings className="w-4 h-4" />
-            Admin
-          </button>
-        </div>
+      {/* Theme-based Overlay */}
+      <div className={`fixed inset-0 z-0 transition-all duration-700 ${isDarkMode ? 'bg-gradient-to-br from-black/70 via-black/60 to-black/70' : 'bg-gradient-to-br from-white/50 via-white/40 to-white/50'}`} />
+      <div className={`fixed inset-0 z-0 mesh-gradient transition-opacity duration-700 ${isDarkMode ? 'opacity-20' : 'opacity-10'}`} />
+      
+      {/* Background Effects */}
+      <div className={`fixed top-0 left-0 w-[500px] h-[500px] rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 z-0 transition-all duration-700 ${isDarkMode ? 'bg-primary-500/10' : 'bg-primary-500/5'}`} />
+      <div className={`fixed bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-3xl translate-x-1/2 translate-y-1/2 z-0 transition-all duration-700 ${isDarkMode ? 'bg-accent/10' : 'bg-accent/5'}`} />
 
-        {/* Header with Logos */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="flex items-center justify-center gap-6 mb-6">
-            <img src="/assets/logo1-kkp.png.png" alt="KKP" className="h-20 md:h-24 object-contain drop-shadow-lg" />
-            <img src="/assets/logo2-bppmhkp.png" alt="BPPMHKP" className="h-20 md:h-24 object-contain drop-shadow-lg" />
+      {/* Main Content */}
+      <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+        <div className="relative z-10 max-w-2xl mx-auto">
+          {/* Theme Toggle Button - Top Left */}
+          <div className="flex justify-between items-center mb-6 print-hidden">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 text-sm backdrop-blur-sm border ${
+                isDarkMode 
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' 
+                  : 'bg-black/5 hover:bg-black/10 text-gray-800 border-black/10'
+              }`}
+            >
+              {isDarkMode ? (
+                <>
+                  <Sun className="w-4 h-4" />
+                  <span>Siang</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-4 h-4" />
+                  <span>Malam</span>
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={() => navigate('/admin/login')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all text-sm backdrop-blur-sm border ${
+                isDarkMode 
+                  ? 'bg-white/10 hover:bg-white/20 text-white border-white/10' 
+                  : 'bg-black/5 hover:bg-black/10 text-gray-800 border-black/10'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Admin
+            </button>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white">Smart Queue System</h1>
-          <p className="text-white/60 mt-2 text-lg">Buku Tamu Digital BPPMHKP Lampung</p>
-        </div>
+
+          {/* Header with Logos */}
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="flex items-center justify-center gap-6 mb-6">
+              <img src="/assets/logo1-kkp.png.png" alt="KKP" className="h-20 md:h-24 object-contain drop-shadow-lg" />
+              <img src="/assets/logo2-bppmhkp.png" alt="BPPMHKP" className="h-20 md:h-24 object-contain drop-shadow-lg" />
+            </div>
+            <h1 className={`text-3xl md:text-4xl font-bold transition-colors duration-700 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Smart Queue System</h1>
+            <p className={`mt-2 text-lg transition-colors duration-700 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>Buku Tamu Digital BPPMHKP Lampung</p>
+          </div>
 
         {/* Zone Status */}
         {distance !== null && (
@@ -1115,8 +1159,9 @@ const PublicForm = () => {
 
         {/* Hidden canvas for photo capture */}
         <canvas ref={canvasRef} className="hidden" />
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

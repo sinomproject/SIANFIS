@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const QueueHistory = () => {
   const navigate = useNavigate();
@@ -164,7 +164,7 @@ const QueueHistory = () => {
       q.finished_at || '-',
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
       head: headers,
       body: rows,
       startY: 28,

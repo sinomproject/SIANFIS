@@ -88,20 +88,38 @@ const PublicDisplay = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex flex-col items-center justify-center gap-6">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-white/20 rounded-full" />
-          <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
+      <div 
+        className="min-h-screen flex flex-col items-center justify-center gap-6"
+        style={{
+          backgroundImage: "url('/assets/BG1.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/70" />
+        <div className="relative z-10 flex flex-col items-center justify-center gap-6">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-white/20 rounded-full" />
+            <div className="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
+          </div>
+          <p className="text-white/80 text-xl">Memuat data...</p>
         </div>
-        <p className="text-white/80 text-xl">Memuat data...</p>
       </div>
     );
   }
 
   if (error && !displayData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
-        <div className="text-center max-w-md animate-fade-in">
+      <div 
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{
+          backgroundImage: "url('/assets/BG1.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/70" />
+        <div className="relative z-10 text-center max-w-md animate-fade-in">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-red-500/20 mb-6">
             <WifiOff className="w-12 h-12 text-red-400" />
           </div>
@@ -122,9 +140,19 @@ const PublicDisplay = () => {
   const { current, next_waiting, stats } = displayData || {};
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 text-white relative overflow-hidden">
+    <div 
+      className="min-h-screen text-white relative overflow-hidden"
+      style={{
+        backgroundImage: "url('/assets/BG1.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/70" />
+      <div className="absolute inset-0 mesh-gradient opacity-20" />
+      
       {/* Background Effects */}
-      <div className="absolute inset-0 mesh-gradient opacity-30" />
       <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-accent/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
       
