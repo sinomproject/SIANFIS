@@ -35,6 +35,7 @@ class DisplayController extends Controller
                     'service_name' => $currentCalled->service->name,
                     'visitor_name' => $currentCalled->visitor->name,
                     'called_at' => $currentCalled->called_at?->format('H:i'),
+                    'called_at_timestamp' => $currentCalled->called_at?->timestamp,
                 ] : null,
                 'next_waiting' => array_map(function ($queue) {
                     return [

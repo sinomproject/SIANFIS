@@ -10,12 +10,44 @@ const PublicDisplay = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+<<<<<<< HEAD
   const [youtubePlaylistUrl, setYoutubePlaylistUrl] = useState(null);
   const [showUnlockScreen, setShowUnlockScreen] = useState(true);
 
   const lastQueueId = useRef(null);
   const pollingIntervalRef = useRef(null);
   const speechInitialized = useRef(false);
+=======
+  const [videoUrl, setVideoUrl] = useState(null);
+  
+  const lastQueueIdRef = useRef(null);
+  const lastCalledAtRef = useRef(null);
+  const soundEnabledRef = useRef(soundEnabled);
+  const videoRef = useRef(null);
+  const audioInitializedRef = useRef(false);
+  
+  useEffect(() => {
+    soundEnabledRef.current = soundEnabled;
+  }, [soundEnabled]);
+
+  // Initialize audio on first user interaction (for browser autoplay policy)
+  const initializeAudio = useCallback(() => {
+    if (!audioInitializedRef.current && 'speechSynthesis' in window) {
+      // Trigger a silent utterance to initialize the speech synthesis engine
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      window.speechSynthesis.speak(utterance);
+      audioInitializedRef.current = true;
+    }
+  }, []);
+
+  // Function to lower video volume
+  const lowerVideoVolume = useCallback(() => {
+    if (videoRef.current) {
+      videoRef.current.volume = 0.1; // Volume 10% saat panggilan
+    }
+  }, []);
+>>>>>>> 0be3ad1830fce84f2e8e9edaa88fc3fd96533b14
 
   const isAdmin = localStorage.getItem('admin_token');
 
@@ -45,11 +77,44 @@ const PublicDisplay = () => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (!speechInitialized.current) {
       console.log('[Display] Initializing speech system...');
       initSpeechEngine();
       speechInitialized.current = true;
+=======
+  // Initialize audio on first user interaction (required by browsers)
+  useEffect(() => {
+    const initOnInteraction = () => {
+      initializeAudio();
+      // Remove listeners after first interaction
+      document.removeEventListener('click', initOnInteraction);
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('keydown', initOnInteraction);
+    };
+    
+    document.addEventListener('click', initOnInteraction);
+    document.addEventListener('touchstart', initOnInteraction);
+    document.addEventListener('keydown', initOnInteraction);
+    
+    return () => {
+      document.removeEventListener('click', initOnInteraction);
+      document.removeEventListener('touchstart', initOnInteraction);
+      document.removeEventListener('keydown', initOnInteraction);
+    };
+  }, [initializeAudio]);
+
+  // Fetch video
+  const fetchVideo = useCallback(async () => {
+    try {
+      const response = await publicApi.getVideo();
+      if (response.data.data.exists) {
+        setVideoUrl(response.data.data.url);
+      }
+    } catch (err) {
+      console.error('Failed to fetch video:', err);
+>>>>>>> 0be3ad1830fce84f2e8e9edaa88fc3fd96533b14
     }
   }, []);
 
@@ -70,6 +135,7 @@ const PublicDisplay = () => {
       setError(null);
       const response = await publicApi.getDisplayData();
       const data = response.data.data;
+<<<<<<< HEAD
 
       if (data.current && data.current.queue_id) {
         if (data.current.queue_id !== lastQueueId.current) {
@@ -83,6 +149,38 @@ const PublicDisplay = () => {
             counterName: data.current.counter_name,
             service: data.current.service_name
           });
+=======
+      
+      // Check if there's a new call or recall
+      if (data.current) {
+        const isNewQueue = data.current.queue_id !== lastQueueIdRef.current;
+        const isRecall = data.current.called_at_timestamp && 
+                         data.current.called_at_timestamp !== lastCalledAtRef.current;
+        
+        // Play sound if: new queue OR recall (same queue but new called_at)
+        if ((isNewQueue || isRecall) && soundEnabledRef.current) {
+          // Initialize audio on first call (browser autoplay policy)
+          initializeAudio();
+          
+          // Turunkan volume video saat panggilan
+          lowerVideoVolume();
+          
+          console.log('Playing sound for queue:', data.current.queue_number, 'Counter:', data.current.counter_number);
+          
+          // Putar suara panggilan dengan callback untuk mengembalikan volume
+          speakQueueNumber(
+            data.current.queue_number, 
+            data.current.counter_number, 
+            data.current.counter_name,
+            // Callback setelah panggilan selesai (2x pengulangan)
+            () => {
+              restoreVideoVolume();
+            }
+          );
+          
+          lastQueueIdRef.current = data.current.queue_id;
+          lastCalledAtRef.current = data.current.called_at_timestamp;
+>>>>>>> 0be3ad1830fce84f2e8e9edaa88fc3fd96533b14
         }
       }
 
@@ -93,7 +191,11 @@ const PublicDisplay = () => {
     } finally {
       setLoading(false);
     }
+<<<<<<< HEAD
   };
+=======
+  }, [lowerVideoVolume, restoreVideoVolume, initializeAudio]);
+>>>>>>> 0be3ad1830fce84f2e8e9edaa88fc3fd96533b14
 
   useEffect(() => {
     console.log('[Display] Starting display page...');
