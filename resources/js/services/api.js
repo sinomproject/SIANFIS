@@ -38,8 +38,17 @@ export const publicApi = {
   // Get display data
   getDisplayData: () => api.get('/display/current'),
 
-  // Get video
-  getVideo: () => api.get('/video'),
+  // Get video (DEPRECATED - replaced with YouTube Playlist)
+  // getVideo: () => api.get('/video'),
+
+  // Get location settings
+  getLocationSettings: () => api.get('/settings/location'),
+
+  // Get app settings (header, logo)
+  getAppSettings: () => api.get('/settings/app'),
+
+  // Get audio settings (voice announcement)
+  getAudioSettings: () => api.get('/settings/audio'),
 };
 
 // ==================== ADMIN API ====================
@@ -71,12 +80,17 @@ export const adminApi = {
   updateCounter: (id, data) => api.put(`/admin/services/counters/${id}`, data),
   deleteCounter: (id) => api.delete(`/admin/services/counters/${id}`),
 
-  // Video
-  getVideo: () => api.get('/admin/video'),
-  uploadVideo: (formData) => api.post('/admin/video', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  deleteVideo: () => api.delete('/admin/video'),
+  // Video (DEPRECATED - replaced with YouTube Playlist)
+  // getVideo: () => api.get('/admin/video'),
+  // uploadVideo: (formData) => api.post('/admin/video', formData, {
+  //   headers: { 'Content-Type': 'multipart/form-data' },
+  // }),
+  // deleteVideo: () => api.delete('/admin/video'),
+
+  // Settings
+  updateLocationSettings: (data) => api.put('/admin/settings/location', data),
+  updateAppSettings: (data) => api.put('/admin/settings/app', data),
+  updateAudioSettings: (data) => api.put('/admin/settings/audio', data),
 };
 
 export default api;

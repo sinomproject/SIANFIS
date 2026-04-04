@@ -48,3 +48,15 @@ Route::get('/admin/history', function () {
 Route::get('/admin/services', function () {
     return view('app');
 });
+
+Route::get('/admin/location-settings', function () {
+    return view('app');
+});
+
+Route::get('/admin/app-settings', function () {
+    return view('app');
+});
+
+Route::get('/admin/audio-settings', function () {
+    return view('app');
+});

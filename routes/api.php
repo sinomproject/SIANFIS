@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\QueueController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\VideoController;
+use App\Http\Controllers\Admin\SettingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,15 @@ use App\Http\Controllers\Admin\VideoController;
 // Services (for dropdown)
 Route::get('/services', [VisitorController::class, 'getServices']);
 
+// Location Settings (public - for form validation)
+Route::get('/settings/location', [SettingController::class, 'getLocationSettings']);
+
+// App Settings (public - for header & logo)
+Route::get('/settings/app', [SettingController::class, 'getAppSettings']);
+
+// Audio Settings (public - for voice announcement)
+Route::get('/settings/audio', [SettingController::class, 'getAudioSettings']);
+
 // Visitor Registration
 Route::post('/queue/register', [VisitorController::class, 'register']);
 
@@ -31,8 +41,8 @@ Route::get('/ticket/code/{code}', [TicketController::class, 'getByCode']);
 // Display (for polling)
 Route::get('/display/current', [DisplayController::class, 'current']);
 
-// Video (public - for display)
-Route::get('/video', [VideoController::class, 'show']);
+// Video (DEPRECATED - replaced with YouTube Playlist)
+// Route::get('/video', [VideoController::class, 'show']);
 
 // ==================== ADMIN AUTH ROUTES ====================
 
@@ -72,10 +82,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/counters/{id}', [ServiceController::class, 'destroyCounter']);
     });
 
-    // Video Management
-    Route::prefix('admin/video')->group(function () {
-        Route::get('/', [VideoController::class, 'show']);
-        Route::post('/', [VideoController::class, 'store']);
-        Route::delete('/', [VideoController::class, 'destroy']);
+    // Video Management (DEPRECATED - replaced with YouTube Playlist)
+    // Route::prefix('admin/video')->group(function () {
+    //     Route::get('/', [VideoController::class, 'show']);
+    //     Route::post('/', [VideoController::class, 'store']);
+    //     Route::delete('/', [VideoController::class, 'destroy']);
+    // });
+
+    // Settings Management
+    Route::prefix('admin/settings')->group(function () {
+        Route::put('/location', [SettingController::class, 'updateLocationSettings']);
+        Route::put('/app', [SettingController::class, 'updateAppSettings']);
+        Route::put('/audio', [SettingController::class, 'updateAudioSettings']);
     });
 });

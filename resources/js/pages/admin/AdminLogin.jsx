@@ -67,8 +67,8 @@ const AdminLogin = () => {
         <CardHeader className="text-center pb-2">
           {/* Logos */}
           <div className="flex items-center justify-center gap-6 mb-6">
-            <img src="/assets/logo1-kkp.png.png" alt="KKP" className="h-16 object-contain drop-shadow-lg" />
-            <img src="/assets/logo2-bppmhkp.png" alt="BPPMHKP" className="h-16 object-contain drop-shadow-lg" />
+            <img src="/assets/LOGO_UMA.png" alt="KKP" className="h-16 object-contain drop-shadow-lg" />
+            <img src="/assets/unggul.png" alt="BPPMHKP" className="h-16 object-contain drop-shadow-lg" />
           </div>
           
           {/* Icon */}
@@ -78,7 +78,7 @@ const AdminLogin = () => {
           
           <CardTitle className="text-2xl font-bold">Selamat Datang</CardTitle>
           <p className="text-muted-foreground mt-2">
-            Smart Queue System - BPPMHKP Lampung
+            SIANFIS - Sistem Informasi Antrian Fisipol
           </p>
         </CardHeader>
         

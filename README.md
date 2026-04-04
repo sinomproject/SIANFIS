@@ -1,4 +1,4 @@
-# Smart Queue System - Buku Tamu Digital
+# SIANFIS - Sistem Informasi Antrian Fisipol - Buku Tamu Digital
 
 Sistem Antrian Terintegrasi untuk pengelolaan pengunjung dan antrian secara digital.
 
@@ -290,5 +290,5 @@ MIT License
 
 ## 👨‍💻 Author
 
-Smart Queue System - Buku Tamu Digital  
+SIANFIS - Sistem Informasi Antrian Fisipol - Buku Tamu Digital  
 Developed for BPPMHKP (Balai Pengujian dan Sertifikasi Mutu Hasil Perikanan) - 2026

@@ -1,4 +1,4 @@
-# 📊 PROGRESS REPORT - Smart Queue System (Buku Tamu Digital)
+# 📊 PROGRESS REPORT - SIANFIS - Sistem Informasi Antrian Fisipol (Buku Tamu Digital)
 
 > Dokumentasi kemajuan, struktur sistem, kendala, dan rencana pengembangan  
 > **Terakhir diperbarui:** 2 Maret 2026
@@ -10,7 +10,7 @@
 ### Informasi Umum
 | Item | Keterangan |
 |------|------------|
-| **Nama Proyek** | Smart Queue System - Buku Tamu Digital |
+| **Nama Proyek** | SIANFIS - Sistem Informasi Antrian Fisipol - Buku Tamu Digital |
 | **Lokasi** | BPPMHKP Lampung (Balai PPMHKP) |
 | **Tanggal Mulai** | 26 Februari 2026 |
 | **Status** | Aktif & Berfungsi |

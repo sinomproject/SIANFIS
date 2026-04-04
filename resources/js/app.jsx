@@ -12,6 +12,9 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import QueueManagement from './pages/admin/QueueManagement';
 import QueueHistory from './pages/admin/QueueHistory';
 import ServiceManagement from './pages/admin/ServiceManagement';
+import LocationSettings from './pages/admin/LocationSettings';
+import AppSettings from './pages/admin/AppSettings';
+import AudioSettings from './pages/admin/AudioSettings';
 
 function App() {
   return (
@@ -29,6 +32,9 @@ function App() {
         <Route path="/admin/queue" element={<QueueManagement />} />
         <Route path="/admin/history" element={<QueueHistory />} />
         <Route path="/admin/services" element={<ServiceManagement />} />
+        <Route path="/admin/location-settings" element={<LocationSettings />} />
+        <Route path="/admin/app-settings" element={<AppSettings />} />
+        <Route path="/admin/audio-settings" element={<AudioSettings />} />
       </Routes>
     </BrowserRouter>
   );

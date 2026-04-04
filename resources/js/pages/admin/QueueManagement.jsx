@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/api';
 import { Card, CardContent, Button, Select, Badge } from '@/components/ui';
-import { 
+import {
   LayoutDashboard, FileText, Settings, LogOut,
   RefreshCw, Loader2, Phone, Building2, User,
-  Play, Check, SkipBack, RotateCcw, MapPin, 
+  Play, Check, SkipBack, RotateCcw, MapPin,
   Camera, IdCard, X, Eye, Calendar, ChevronRight,
-  Volume2
+  Volume2, Type
 } from 'lucide-react';
 
 const QueueManagement = () => {
@@ -162,11 +162,11 @@ const QueueManagement = () => {
         {/* Logo Header */}
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-center gap-4 mb-3">
-            <img src="/assets/logo1-kkp.png.png" alt="KKP" className="h-12 object-contain" />
-            <img src="/assets/logo2-bppmhkp.png" alt="BPPMHKP" className="h-12 object-contain" />
+            <img src="/assets/LOGO_UMA.png" alt="KKP" className="h-12 object-contain" />
+            <img src="/assets/unggul.png" alt="BPPMHKP" className="h-12 object-contain" />
           </div>
           <div className="text-center">
-            <h1 className="text-lg font-bold text-foreground">Smart Queue</h1>
+            <h1 className="text-lg font-bold text-foreground">SIANFIS</h1>
             <p className="text-xs text-muted-foreground">Admin Panel</p>
           </div>
         </div>
@@ -199,6 +199,27 @@ const QueueManagement = () => {
           >
             <Settings className="w-5 h-5" />
             Layanan
+          </button>
+          <button
+            onClick={() => navigate('/admin/location-settings')}
+            className="material-nav-item w-full"
+          >
+            <MapPin className="w-5 h-5" />
+            Lokasi
+          </button>
+          <button
+            onClick={() => navigate('/admin/app-settings')}
+            className="material-nav-item w-full"
+          >
+            <Type className="w-5 h-5" />
+            Header & Logo
+          </button>
+          <button
+            onClick={() => navigate('/admin/audio-settings')}
+            className="material-nav-item w-full"
+          >
+            <Volume2 className="w-5 h-5" />
+            Suara
           </button>
         </nav>
 
