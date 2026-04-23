@@ -19,30 +19,33 @@ let playing = false;
 /**
  * Build ordered clip list for a queue call.
  *
- * Example: kode="IP-001", loket=1
+ * Example: kode="CK-001", counterName="IP"
  * → [
  *     BASE + 'nomor-antrian.mp3',
- *     BASE + 'i.mp3',
- *     BASE + 'p.mp3',
+ *     BASE + 'c.mp3',
+ *     BASE + 'k.mp3',
  *     BASE + '0.mp3',
  *     BASE + '0.mp3',
  *     BASE + '1.mp3',
  *     BASE + 'menuju-loket.mp3',
- *     BASE + 'loket-1.mp3',
+ *     BASE + 'i.mp3',
+ *     BASE + 'p.mp3',
  *   ]
+ *
+ * counterName can be any string: "IP", "CS", "TELLER", "1", "12"
  */
-function buildSequence(kode, loket) {
+function buildSequence(kode, counterName) {
   const sequence = [];
 
   // 1. Opening phrase
   sequence.push(BASE + 'nomor-antrian.mp3');
 
-  // 2. Split kode into prefix + digits
+  // 2. Split kode into prefix + digits  (e.g. "CK-001" → "CK" + "001")
   const dashIdx = kode.indexOf('-');
   const prefix  = dashIdx !== -1 ? kode.slice(0, dashIdx)  : kode;
   const digits  = dashIdx !== -1 ? kode.slice(dashIdx + 1) : '';
 
-  // 3. Prefix — one clip per character (lowercase filename)
+  // 3. Prefix — one clip per character (lowercase)
   prefix.split('').forEach(char => {
     sequence.push(BASE + char.toLowerCase() + '.mp3');
   });
@@ -55,10 +58,15 @@ function buildSequence(kode, loket) {
   // 5. Transition phrase
   sequence.push(BASE + 'menuju-loket.mp3');
 
-  // 6. Loket number
-  sequence.push(BASE + 'loket-' + loket + '.mp3');
+  // 6. Counter name — dynamic, char by char (letters + digits only)
+  const counter = (counterName ?? '').toString().toLowerCase();
+  counter.split('').forEach(char => {
+    if (/[a-z0-9]/.test(char)) {
+      sequence.push(BASE + char + '.mp3');
+    }
+  });
 
-  console.log('[Speech] Sequence for', kode, 'loket', loket, ':', sequence);
+  console.log('[Speech] Sequence for', kode, '→', counterName, ':', sequence);
   return sequence;
 }
 
@@ -101,8 +109,8 @@ async function processQueue() {
   playing = true;
 
   while (queue.length) {
-    const { kode, loket } = queue.shift();
-    const sequence = buildSequence(kode, loket);
+    const { kode, counterName } = queue.shift();
+    const sequence = buildSequence(kode, counterName);
     await playSequence(sequence);
 
     // Gap between repeated calls
@@ -118,21 +126,24 @@ async function processQueue() {
 /**
  * Antrekan dan putar audio antrian via sequence clip.
  *
- * @param {string}        kode   e.g. "IP-001", "A-023", "CK-007"
- * @param {string|number} loket  e.g. 1, "2"
+ * @param {string} kode         Nomor antrian, e.g. "CK-001", "IP-023"
+ * @param {string} counterName  Nama loket dari DB, e.g. "IP", "CS", "1", "TELLER"
  *
- * Example:
- *   playAntrian("IP-001", 1)
- *   → nomor-antrian → i → p → 0 → 0 → 1 → menuju-loket → loket-1
+ * Examples:
+ *   playAntrian("CK-001", "IP")
+ *   → nomor-antrian → c → k → 0 → 0 → 1 → menuju-loket → i → p
+ *
+ *   playAntrian("A-007", "12")
+ *   → nomor-antrian → a → 0 → 0 → 7 → menuju-loket → 1 → 2
  */
-export function playAntrian(kode, loket) {
+export function playAntrian(kode, counterName) {
   if (!window.AUDIO_UNLOCKED) {
     console.warn('[Speech] Audio belum di-unlock.');
     return;
   }
 
-  console.log('[Speech] Enqueue:', kode, 'loket', loket);
-  queue.push({ kode, loket });
+  console.log('[Speech] Enqueue:', kode, '→', counterName);
+  queue.push({ kode, counterName });
   processQueue();
 }
 

@@ -118,7 +118,7 @@ const PublicDisplay = () => {
 
           lastQueueId.current = data.current.queue_id;
 
-          playAntrian(data.current.queue_number, data.current.counter_number);
+          playAntrian(data.current.queue_number, data.current.counter_name);
         }
       }
 
