@@ -11,6 +11,17 @@
 
 const BASE = '/storage/audio/';
 
+// ── Counter name → audio file mapping ────────────────────────────────────────
+// Add entries here for any counter whose name should be spoken as a full phrase
+// rather than spelled letter-by-letter.
+const COUNTER_MAP = {
+  'IP':  'ilmu-pemerintahan.mp3',
+  'AP':  'administrasi-publik.mp3',
+  'IK1': 'ilmu-komunikasi-1.mp3',
+  'IK2': 'ilmu-komunikasi-2.mp3',
+  'KTU': 'ktu.mp3',
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let queue   = [];   // pending playAntrian calls
 let playing = false;
@@ -58,13 +69,20 @@ function buildSequence(kode, counterName) {
   // 5. Transition phrase
   sequence.push(BASE + 'menuju-loket.mp3');
 
-  // 6. Counter name — dynamic, char by char (letters + digits only)
-  const counter = (counterName ?? '').toString().toLowerCase();
-  counter.split('').forEach(char => {
-    if (/[a-z0-9]/.test(char)) {
-      sequence.push(BASE + char + '.mp3');
-    }
-  });
+  // 6. Counter name — mapped phrase or char-by-char fallback
+  const counterKey = (counterName ?? '').toString().toUpperCase().trim();
+
+  if (COUNTER_MAP[counterKey]) {
+    // Known counter → use full spoken phrase (e.g. "ilmu-pemerintahan.mp3")
+    sequence.push(BASE + COUNTER_MAP[counterKey]);
+  } else {
+    // Unknown counter → spell char by char (letters + digits only)
+    counterKey.split('').forEach(char => {
+      if (/[A-Z0-9]/.test(char)) {
+        sequence.push(BASE + char.toLowerCase() + '.mp3');
+      }
+    });
+  }
 
   console.log('[Speech] Sequence for', kode, '→', counterName, ':', sequence);
   return sequence;
@@ -91,13 +109,17 @@ function playClip(src) {
 }
 
 // ── Sequence player ───────────────────────────────────────────────────────────
+const isDigitClip = (src) => /\/[0-9]\.mp3$/.test(src);
+
 async function playSequence(sequence) {
   for (let i = 0; i < sequence.length; i++) {
     await playClip(sequence[i]);
 
-    // 150ms gap between clips (skip after last)
     if (i < sequence.length - 1) {
-      await new Promise(r => setTimeout(r, 150));
+      // Digit → digit: minimal gap (sounds natural, like reading "nol nol satu")
+      // Anything else: normal pause between words/phrases
+      const gap = (isDigitClip(sequence[i]) && isDigitClip(sequence[i + 1])) ? 60 : 120;
+      await new Promise(r => setTimeout(r, gap));
     }
   }
 }

@@ -40,9 +40,29 @@ def make_filename(prefix, number, loket):
     code = f"{prefix.lower()}-{number:03d}"
     return f"{code}_loket{loket}.mp3"
 
+# ── Static audio files (counter names + core phrases) ────────────────────────
+STATIC_CATALOGUE = [
+    # Core sequence phrases
+    ('nomor-antrian.mp3',     'Nomor antrian'),
+    ('menuju-loket.mp3',      'menuju loket'),
+    # Digits 0–9
+    ('0.mp3', 'nol'),   ('1.mp3', 'satu'),  ('2.mp3', 'dua'),
+    ('3.mp3', 'tiga'),  ('4.mp3', 'empat'), ('5.mp3', 'lima'),
+    ('6.mp3', 'enam'),  ('7.mp3', 'tujuh'), ('8.mp3', 'delapan'),
+    ('9.mp3', 'sembilan'),
+    # Single-letter prefixes a–z
+    *[(f'{c}.mp3', c.upper()) for c in 'abcdefghijklmnopqrstuvwxyz'],
+    # Counter name — full spoken phrase (matches COUNTER_MAP in speechEngine.js)
+    ('ilmu-pemerintahan.mp3',  'Ilmu Pemerintahan'),
+    ('administrasi-publik.mp3','Administrasi Publik'),
+    ('ilmu-komunikasi-1.mp3',  'Ilmu Komunikasi satu'),
+    ('ilmu-komunikasi-2.mp3',  'Ilmu Komunikasi dua'),
+    ('ktu.mp3',                'K T U'),
+]
+
 # ── Build full catalogue ─────────────────────────────────────────────────────
 def build_catalogue():
-    entries = []
+    entries = list(STATIC_CATALOGUE)
     for prefix in PREFIXES:
         for number in NUMBER_RANGE:
             for loket in LOKETS:
