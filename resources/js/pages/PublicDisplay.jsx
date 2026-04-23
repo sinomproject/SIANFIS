@@ -48,8 +48,20 @@ const PublicDisplay = () => {
   // Auto-focus unlock button on load (Google TV remote needs focusable element)
   useEffect(() => {
     if (showUnlockScreen) {
-      setTimeout(() => unlockBtnRef.current?.focus(), 300);
+      setTimeout(() => unlockBtnRef.current?.focus(), 500);
     }
+  }, [showUnlockScreen]);
+
+  // Global Enter key listener — failsafe for Google TV remote
+  useEffect(() => {
+    if (!showUnlockScreen) return;
+    const handler = (e) => {
+      if (e.key === 'Enter' || e.keyCode === 13) {
+        handleUnlockAudio();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [showUnlockScreen]);
 
   useEffect(() => {
@@ -297,37 +309,92 @@ const PublicDisplay = () => {
       {/* Audio Unlock Screen */}
       {showUnlockScreen && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{
-            background: 'rgba(0, 0, 0, 0.92)',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.93)',
             backdropFilter: 'blur(12px)',
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden',
           }}
         >
-          <div className="text-center animate-fade-in">
+          <div style={{ textAlign: 'center', maxWidth: '800px', padding: '0 32px' }}>
+            {/* Icon */}
             <div
-              className="inline-flex items-center justify-center w-32 h-32 rounded-full mb-8 animate-pulse"
-              style={{ background: 'rgba(255, 0, 187, 0.2)' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 128,
+                height: 128,
+                borderRadius: '50%',
+                marginBottom: 32,
+                background: 'rgba(255, 0, 187, 0.2)',
+              }}
             >
-              <Volume2 className="w-16 h-16" style={{ color: FISIPOL_PINK }} />
+              <Volume2 style={{ width: 64, height: 64, color: FISIPOL_PINK }} />
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-4">
+
+            {/* Title */}
+            <h1 style={{
+              fontSize: 48,
+              fontWeight: 900,
+              color: '#ffffff',
+              marginBottom: 16,
+              lineHeight: 1.2,
+            }}>
               Sistem Antrian SIANFIS
             </h1>
-            <p className="text-xl text-white/70 mb-8 max-w-md mx-auto">
-              Klik tombol di bawah untuk mengaktifkan pengumuman suara antrian
+
+            {/* Subtitle */}
+            <p style={{
+              fontSize: 20,
+              color: 'rgba(255,255,255,0.65)',
+              marginBottom: 40,
+            }}>
+              Tekan tombol atau OK pada remote untuk mengaktifkan suara
             </p>
+
+            {/* Button */}
             <button
               ref={unlockBtnRef}
               onClick={handleUnlockAudio}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleUnlockAudio(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.keyCode === 13) handleUnlockAudio(); }}
               tabIndex={0}
-              className="inline-flex items-center gap-4 px-12 py-6 text-white rounded-2xl font-bold text-2xl hover:scale-105 transition-all shadow-2xl focus:outline-none focus:ring-4 focus:ring-pink-400"
-              style={{ background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)` }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 16,
+                padding: '24px 48px',
+                background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)`,
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: 16,
+                fontSize: 24,
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: `0 8px 32px ${FISIPOL_PINK}60`,
+                outline: 'none',
+              }}
+              onFocus={e => {
+                e.currentTarget.style.outline = `3px solid ${FISIPOL_PINK}`;
+                e.currentTarget.style.outlineOffset = '4px';
+              }}
+              onBlur={e => {
+                e.currentTarget.style.outline = 'none';
+                e.currentTarget.style.outlineOffset = '0';
+              }}
             >
-              <Volume2 className="w-8 h-8" />
+              <Volume2 style={{ width: 32, height: 32 }} />
               Aktifkan Suara
             </button>
-            <p className="text-sm text-white/40 mt-6">
+
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginTop: 24 }}>
               Diperlukan sekali saat pertama membuka display
             </p>
           </div>
