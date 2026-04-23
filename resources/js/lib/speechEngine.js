@@ -1,244 +1,160 @@
-import { publicApi } from '@/services/api';
+/**
+ * speechEngine.js — Sequence-based MP3 queue audio
+ *
+ * Plays individual audio clips in order:
+ *   nomor-antrian.mp3 → I.mp3 → P.mp3 → 0.mp3 → 0.mp3 → 1.mp3
+ *   → menuju-loket.mp3 → loket-1.mp3
+ *
+ * Works for ANY prefix: A, IP, CK, AP, etc.
+ * No merged file required.
+ */
 
-let speechQueue = [];
-let speaking = false;
-let audioSettings = null;
-let voiceReady = false;
-let selectedVoice = null;
+const BASE = '/storage/audio/';
 
-function spellQueueNumber(queueNumber) {
-  if (!queueNumber) return '';
+// ── State ─────────────────────────────────────────────────────────────────────
+let queue   = [];   // pending playAntrian calls
+let playing = false;
 
-  const parts = queueNumber.split('-');
+// ── Sequence builder ──────────────────────────────────────────────────────────
+/**
+ * Build ordered clip list for a queue call.
+ *
+ * Example: kode="IP-001", loket=1
+ * → [
+ *     BASE + 'nomor-antrian.mp3',
+ *     BASE + 'i.mp3',
+ *     BASE + 'p.mp3',
+ *     BASE + '0.mp3',
+ *     BASE + '0.mp3',
+ *     BASE + '1.mp3',
+ *     BASE + 'menuju-loket.mp3',
+ *     BASE + 'loket-1.mp3',
+ *   ]
+ */
+function buildSequence(kode, loket) {
+  const sequence = [];
 
-  if (parts.length === 2) {
-    const prefix = parts[0];
-    const numbers = parts[1];
+  // 1. Opening phrase
+  sequence.push(BASE + 'nomor-antrian.mp3');
 
-    const digitWords = {
-      '0': 'nol',
-      '1': 'satu',
-      '2': 'dua',
-      '3': 'tiga',
-      '4': 'empat',
-      '5': 'lima',
-      '6': 'enam',
-      '7': 'tujuh',
-      '8': 'delapan',
-      '9': 'sembilan'
+  // 2. Split kode into prefix + digits
+  const dashIdx = kode.indexOf('-');
+  const prefix  = dashIdx !== -1 ? kode.slice(0, dashIdx)  : kode;
+  const digits  = dashIdx !== -1 ? kode.slice(dashIdx + 1) : '';
+
+  // 3. Prefix — one clip per character (lowercase filename)
+  prefix.split('').forEach(char => {
+    sequence.push(BASE + char.toLowerCase() + '.mp3');
+  });
+
+  // 4. Digits — one clip per digit
+  digits.split('').forEach(d => {
+    sequence.push(BASE + d + '.mp3');
+  });
+
+  // 5. Transition phrase
+  sequence.push(BASE + 'menuju-loket.mp3');
+
+  // 6. Loket number
+  sequence.push(BASE + 'loket-' + loket + '.mp3');
+
+  console.log('[Speech] Sequence for', kode, 'loket', loket, ':', sequence);
+  return sequence;
+}
+
+// ── Single clip player ────────────────────────────────────────────────────────
+function playClip(src) {
+  return new Promise((resolve) => {
+    const audio = new Audio(src);
+    audio.volume = 1.0;
+
+    audio.onended = resolve;
+
+    audio.onerror = () => {
+      console.warn('[Speech] File not found, skipping:', src);
+      resolve();
     };
 
-    const spelledNumbers = numbers.split('').map(d => digitWords[d] || d).join(' ');
-
-    return `${prefix}, ${spelledNumbers}`;
-  }
-
-  return queueNumber;
+    audio.play().catch((err) => {
+      console.warn('[Speech] play() rejected:', src, err);
+      resolve();
+    });
+  });
 }
 
-function initVoices() {
-  const loadVoices = () => {
-    const voices = window.speechSynthesis.getVoices();
+// ── Sequence player ───────────────────────────────────────────────────────────
+async function playSequence(sequence) {
+  for (let i = 0; i < sequence.length; i++) {
+    await playClip(sequence[i]);
 
-    selectedVoice =
-      voices.find(v => v.lang === 'id-ID') ||
-      voices.find(v => v.name.includes('Indonesia')) ||
-      voices[0];
-
-    voiceReady = true;
-    console.log('[Speech] Voice loaded:', selectedVoice?.name || 'default');
-  };
-
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged = loadVoices;
-}
-
-async function loadAudioSettings() {
-  try {
-    const response = await publicApi.getAudioSettings();
-    audioSettings = response.data.data;
-    console.log('[Speech] Audio settings loaded:', audioSettings);
-  } catch (err) {
-    console.error('[Speech] Failed to load audio settings:', err);
-    audioSettings = {
-      voice_volume: '1.0',
-      voice_rate: '0.9',
-      voice_pitch: '1.0',
-      voice_repeat: '2',
-      voice_language: 'id-ID',
-      voice_template: 'Nomor antrian {nomor_antrian}. Silakan menuju loket {nomor_loket}'
-    };
+    // 150ms gap between clips (skip after last)
+    if (i < sequence.length - 1) {
+      await new Promise(r => setTimeout(r, 150));
+    }
   }
 }
 
+// ── Queue processor ───────────────────────────────────────────────────────────
+async function processQueue() {
+  if (playing || !queue.length) return;
+
+  playing = true;
+
+  while (queue.length) {
+    const { kode, loket } = queue.shift();
+    const sequence = buildSequence(kode, loket);
+    await playSequence(sequence);
+
+    // Gap between repeated calls
+    if (queue.length) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+
+  playing = false;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────────
+/**
+ * Antrekan dan putar audio antrian via sequence clip.
+ *
+ * @param {string}        kode   e.g. "IP-001", "A-023", "CK-007"
+ * @param {string|number} loket  e.g. 1, "2"
+ *
+ * Example:
+ *   playAntrian("IP-001", 1)
+ *   → nomor-antrian → i → p → 0 → 0 → 1 → menuju-loket → loket-1
+ */
+export function playAntrian(kode, loket) {
+  if (!window.AUDIO_UNLOCKED) {
+    console.warn('[Speech] Audio belum di-unlock.');
+    return;
+  }
+
+  console.log('[Speech] Enqueue:', kode, 'loket', loket);
+  queue.push({ kode, loket });
+  processQueue();
+}
+
+// ── Unlock ────────────────────────────────────────────────────────────────────
 export async function unlockAudioSystem() {
-  console.log('[Speech] Unlocking audio system with user gesture...');
+  console.log('[Speech] Unlocking audio...');
 
   try {
-    // Unlock HTML5 Audio
-    const audio = new Audio();
-    audio.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T6y8vkAAAAAAAAAAAAAAAAAAAAAP/7kGQAD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7kGQAP/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
-    await audio.play().catch(() => {});
-
-    // Unlock SpeechSynthesis
-    const test = new SpeechSynthesisUtterance(" ");
-    test.volume = 0;
-    window.speechSynthesis.speak(test);
-    window.speechSynthesis.cancel();
+    const silent = new Audio();
+    silent.src = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADhAC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T6y8vkAAAAAAAAAAAAAAAAAAAAAP/7kGQAD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7kGQAP/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
+    await silent.play().catch(() => {});
 
     window.AUDIO_UNLOCKED = true;
-    console.log('[Speech] Audio system unlocked successfully');
-
+    console.log('[Speech] Audio unlocked');
     return true;
   } catch (err) {
-    console.error('[Speech] Failed to unlock audio:', err);
+    console.error('[Speech] Unlock failed:', err);
     return false;
   }
 }
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 export async function initSpeechEngine() {
-  console.log('[Speech] Initializing speech engine...');
-
-  initVoices();
-  await loadAudioSettings();
-
-  // Handle visibility change
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      console.log('[Speech] Page visible, resuming speech');
-      window.speechSynthesis.resume();
-    }
-  });
-
-  console.log('[Speech] Speech engine ready');
+  console.log('[Speech] Sequence-based MP3 engine ready');
 }
-
-export function enqueueSpeech(payload) {
-  console.log('[Display] New Queue Detected:', payload);
-
-  speechQueue.push(payload);
-  processQueue();
-}
-
-function processQueue() {
-  if (!window.AUDIO_UNLOCKED) {
-    console.warn('[Speech] Audio not unlocked yet, waiting for user interaction');
-    return;
-  }
-
-  if (speaking) {
-    console.log('[Speech] Already speaking, queued');
-    return;
-  }
-
-  if (!speechQueue.length) {
-    return;
-  }
-
-  speaking = true;
-
-  const item = speechQueue.shift();
-
-  setTimeout(() => {
-    speak(item);
-  }, 200);
-}
-
-function speak(data) {
-  if (!window.AUDIO_UNLOCKED) {
-    console.warn('[Speech] Waiting for audio unlock...');
-    speaking = false;
-    return;
-  }
-
-  console.log('[Speech] Canceling any previous speech');
-  window.speechSynthesis.cancel();
-
-  if (data.warmup) {
-    console.log('[Speech] Warmup');
-    const warmup = new SpeechSynthesisUtterance(' ');
-    warmup.volume = 0;
-    warmup.onend = () => {
-      speaking = false;
-      processQueue();
-    };
-    warmup.onerror = () => {
-      speaking = false;
-      processQueue();
-    };
-    window.speechSynthesis.speak(warmup);
-    return;
-  }
-
-  if (!voiceReady || !audioSettings) {
-    console.warn('[Speech] Not ready yet, voiceReady:', voiceReady, 'audioSettings:', !!audioSettings);
-    speaking = false;
-    processQueue();
-    return;
-  }
-
-  console.log('[Speech] Building sentence...');
-
-  const spelledNumber = spellQueueNumber(data.number);
-
-  let text = audioSettings.voice_template || 'Nomor antrian {nomor_antrian}. Silakan menuju loket {nomor_loket}';
-  text = text.replace('{nomor_antrian}', spelledNumber);
-  text = text.replace('{nomor_loket}', data.counter || '');
-  text = text.replace('{nama_loket}', data.counterName || '');
-  text = text.replace('{nama_layanan}', data.service || '');
-
-  console.log('[Speech] Text:', text);
-
-  const repeatCount = parseInt(audioSettings.voice_repeat) || 2;
-  let currentRepeat = 0;
-
-  const speakOnce = () => {
-    console.log('[Speech] Playing... (repeat', currentRepeat + 1, '/', repeatCount + ')');
-
-    const utter = new SpeechSynthesisUtterance(text);
-
-    utter.voice = selectedVoice;
-    utter.lang = audioSettings.voice_language || 'id-ID';
-    utter.rate = parseFloat(audioSettings.voice_rate) || 0.9;
-    utter.pitch = parseFloat(audioSettings.voice_pitch) || 1.0;
-    utter.volume = parseFloat(audioSettings.voice_volume) || 1.0;
-
-    utter.onstart = () => {
-      console.log('[Speech] Started speaking');
-    };
-
-    utter.onend = () => {
-      console.log('[Speech] Finished speaking');
-      currentRepeat++;
-      if (currentRepeat < repeatCount) {
-        setTimeout(speakOnce, 500);
-      } else {
-        console.log('[Speech] All repeats done');
-        speaking = false;
-        processQueue();
-      }
-    };
-
-    utter.onerror = (event) => {
-      console.error('[Speech] Error:', event.error);
-      if (event.error === 'not-allowed') {
-        console.error('[Speech] CRITICAL: Audio not unlocked! User must interact with page first.');
-        window.AUDIO_UNLOCKED = false;
-      }
-      speaking = false;
-      processQueue();
-    };
-
-    setTimeout(() => {
-      window.speechSynthesis.speak(utter);
-    }, 200);
-  };
-
-  speakOnce();
-}
-
-// Auto-process queue when audio is unlocked
-window.addEventListener('audioUnlocked', () => {
-  console.log('[Speech] Audio unlocked event received, processing queue');
-  processQueue();
-});

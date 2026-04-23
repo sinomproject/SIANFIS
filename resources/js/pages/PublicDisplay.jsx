@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi } from '@/services/api';
 import { Users, Clock, RefreshCw, ArrowLeft, LogOut, WifiOff, Maximize, Minimize, Video, MapPin, Volume2 } from 'lucide-react';
-import { initSpeechEngine, enqueueSpeech, unlockAudioSystem } from '@/lib/speechEngine';
+import { initSpeechEngine, playAntrian, unlockAudioSystem } from '@/lib/speechEngine';
 
 const FISIPOL_PINK = '#FF00BB';
 
@@ -23,6 +23,7 @@ const PublicDisplay = () => {
   const lastQueueId = useRef(null);
   const pollingIntervalRef = useRef(null);
   const speechInitialized = useRef(false);
+  const unlockBtnRef = useRef(null);
 
   const isAdmin = localStorage.getItem('admin_token');
 
@@ -43,6 +44,13 @@ const PublicDisplay = () => {
       console.error('[Display] Failed to unlock audio, please try again');
     }
   };
+
+  // Auto-focus unlock button on load (Google TV remote needs focusable element)
+  useEffect(() => {
+    if (showUnlockScreen) {
+      setTimeout(() => unlockBtnRef.current?.focus(), 300);
+    }
+  }, [showUnlockScreen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -98,12 +106,7 @@ const PublicDisplay = () => {
 
           lastQueueId.current = data.current.queue_id;
 
-          enqueueSpeech({
-            number: data.current.queue_number,
-            counter: data.current.counter_number,
-            counterName: data.current.counter_name,
-            service: data.current.service_name
-          });
+          playAntrian(data.current.queue_number, data.current.counter_number);
         }
       }
 
@@ -314,8 +317,11 @@ const PublicDisplay = () => {
               Klik tombol di bawah untuk mengaktifkan pengumuman suara antrian
             </p>
             <button
+              ref={unlockBtnRef}
               onClick={handleUnlockAudio}
-              className="inline-flex items-center gap-4 px-12 py-6 text-white rounded-2xl font-bold text-2xl hover:scale-105 transition-all shadow-2xl"
+              onKeyDown={(e) => { if (e.key === 'Enter') handleUnlockAudio(); }}
+              tabIndex={0}
+              className="inline-flex items-center gap-4 px-12 py-6 text-white rounded-2xl font-bold text-2xl hover:scale-105 transition-all shadow-2xl focus:outline-none focus:ring-4 focus:ring-pink-400"
               style={{ background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)` }}
             >
               <Volume2 className="w-8 h-8" />

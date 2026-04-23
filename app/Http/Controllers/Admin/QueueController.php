@@ -88,6 +88,12 @@ class QueueController extends Controller
                 $request->counter_number
             );
 
+            // Generate audio TTS jika file belum ada
+            $this->generateTtsIfNeeded(
+                $queue->formatted_number,
+                $queue->counter_number
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Antrian berhasil dipanggil',
@@ -104,6 +110,49 @@ class QueueController extends Controller
                 'message' => 'Gagal memanggil antrian',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Generate TTS audio untuk antrian jika file belum ada.
+     * Tidak memblok response jika gagal.
+     */
+    private function generateTtsIfNeeded(string $kode, int $loket): void
+    {
+        $filename = "{$kode}_loket{$loket}.mp3";
+        $path     = storage_path("app/public/audio/{$filename}");
+
+        if (file_exists($path)) {
+            return;
+        }
+
+        // Pastikan direktori ada
+        $dir = storage_path('app/public/audio');
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $python = PHP_OS_FAMILY === 'Windows' ? 'python' : 'python3';
+        $script = base_path('generate_tts.py');
+
+        $cmd = sprintf(
+            '%s %s %s %s',
+            escapeshellcmd($python),
+            escapeshellarg($script),
+            escapeshellarg($kode),
+            escapeshellarg((string) $loket)
+        );
+
+        exec($cmd . ' 2>&1', $output, $exitCode);
+
+        if ($exitCode !== 0) {
+            \Log::warning('[TTS] Gagal generate audio antrian', [
+                'kode'      => $kode,
+                'loket'     => $loket,
+                'cmd'       => $cmd,
+                'output'    => implode("\n", $output),
+                'exit_code' => $exitCode,
+            ]);
         }
     }
 
