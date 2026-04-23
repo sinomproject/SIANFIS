@@ -66,25 +66,18 @@ function buildSequence(kode, counterName) {
     sequence.push(BASE + d + '.mp3');
   });
 
-  // 5. Transition phrase
-  sequence.push(BASE + 'menuju-loket.mp3');
-
-  // 6. Counter name — mapped phrase or char-by-char fallback
+  // 5. Transition + counter name (MAPPED ONLY — no spelling fallback)
   const counterKey = (counterName ?? '').toString().toUpperCase().trim();
 
-  if (COUNTER_MAP[counterKey]) {
-    // Known counter → use full spoken phrase (e.g. "ilmu-pemerintahan.mp3")
-    sequence.push(BASE + COUNTER_MAP[counterKey]);
-  } else {
-    // Unknown counter → spell char by char (letters + digits only)
-    counterKey.split('').forEach(char => {
-      if (/[A-Z0-9]/.test(char)) {
-        sequence.push(BASE + char.toLowerCase() + '.mp3');
-      }
-    });
+  if (!COUNTER_MAP[counterKey]) {
+    console.warn('[Speech] Unknown counter, no audio mapped:', counterKey);
+    return sequence; // play queue number only, skip loket announcement
   }
 
-  console.log('[Speech] Sequence for', kode, '→', counterName, ':', sequence);
+  sequence.push(BASE + 'menuju-loket.mp3');
+  sequence.push(BASE + COUNTER_MAP[counterKey]);
+
+  console.log('[Speech] Sequence for', kode, '→', counterKey, ':', sequence);
   return sequence;
 }
 
@@ -111,15 +104,20 @@ function playClip(src) {
 // ── Sequence player ───────────────────────────────────────────────────────────
 const isDigitClip = (src) => /\/[0-9]\.mp3$/.test(src);
 
+function delay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
 async function playSequence(sequence) {
   for (let i = 0; i < sequence.length; i++) {
     await playClip(sequence[i]);
 
     if (i < sequence.length - 1) {
-      // Digit → digit: minimal gap (sounds natural, like reading "nol nol satu")
-      // Anything else: normal pause between words/phrases
-      const gap = (isDigitClip(sequence[i]) && isDigitClip(sequence[i + 1])) ? 60 : 120;
-      await new Promise(r => setTimeout(r, gap));
+      const curr = sequence[i];
+      const next = sequence[i + 1];
+      // Digit → digit: very fast (sounds like reading "nol nol satu")
+      // Anything else: short natural pause
+      await delay(isDigitClip(curr) && isDigitClip(next) ? 40 : 80);
     }
   }
 }
@@ -148,15 +146,15 @@ async function processQueue() {
 /**
  * Antrekan dan putar audio antrian via sequence clip.
  *
- * @param {string} kode         Nomor antrian, e.g. "CK-001", "IP-023"
- * @param {string} counterName  Nama loket dari DB, e.g. "IP", "CS", "1", "TELLER"
+ * @param {string} kode         Nomor antrian, e.g. "IP-001", "IK1-023"
+ * @param {string} counterName  Nama loket dari DB — harus ada di COUNTER_MAP
  *
  * Examples:
- *   playAntrian("CK-001", "IP")
- *   → nomor-antrian → c → k → 0 → 0 → 1 → menuju-loket → i → p
+ *   playAntrian("IP-001", "IP")
+ *   → nomor-antrian → i → p → 0 → 0 → 1 → menuju-loket → ilmu-pemerintahan
  *
- *   playAntrian("A-007", "12")
- *   → nomor-antrian → a → 0 → 0 → 7 → menuju-loket → 1 → 2
+ *   playAntrian("IK1-007", "IK1")
+ *   → nomor-antrian → i → k → 1 → 0 → 0 → 7 → menuju-loket → ilmu-komunikasi-1
  */
 export function playAntrian(kode, counterName) {
   if (!window.AUDIO_UNLOCKED) {
