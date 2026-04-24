@@ -1,114 +1,125 @@
+#!/usr/bin/env python3
+"""
+generate_audio.py — Per-queue audio generator for SIANFIS.
+
+Generates ONE MP3 per queue number per counter (500 files total).
+Files are skipped if they already exist (safe to re-run).
+
+Usage:
+    python generate_audio.py              # skip existing files
+    python generate_audio.py --force      # regenerate all
+
+Output  (storage/app/public/audio/):
+    ip-001.mp3 … ip-100.mp3
+    ap-001.mp3 … ap-100.mp3
+    ik1-001.mp3 … ik1-100.mp3
+    ik2-001.mp3 … ik2-100.mp3
+    ktu-001.mp3 … ktu-100.mp3
+
+Requirement:
+    pip install edge-tts
+
+After generation:
+    php artisan storage:link
+"""
+
 import os
+import sys
 import asyncio
 import edge_tts
 
-# ── Config ──────────────────────────────────────────────────────────────────
+# ── Config ─────────────────────────────────────────────────────────────────────
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-OUTPUT_DIR = os.path.join(SCRIPT_DIR, 'storage', 'app', 'public', 'audio')
+OUTPUT_DIR  = os.path.join(SCRIPT_DIR, "storage", "app", "public", "audio")
 
-VOICE = "id-ID-GadisNeural"   # suara perempuan Indonesia
-RATE  = "-5%"                 # sedikit lebih lambat (natural)
+VOICE = "id-ID-GadisNeural"
+RATE  = "-10%"
 
-# ── Konfigurasi antrian — sesuaikan dengan layanan yang ada ─────────────────
-# Prefix layanan (huruf kapital, bisa multi-huruf: 'CK', 'AP', dll)
-PREFIXES      = ['A', 'B', 'C', 'CK', 'AP']
-NUMBER_RANGE  = range(1, 100)   # 001 – 099  (sesuaikan kebutuhan)
-LOKETS        = range(1, 11)    # loket 1 – 10
-
-# ── Helpers ─────────────────────────────────────────────────────────────────
-DIGIT_WORDS = ['nol','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan']
-LOKET_WORDS = ['','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan','sepuluh']
-
-def spell_number(n, zero_pad=3):
-    """001 → 'nol nol satu'"""
-    return ' '.join(DIGIT_WORDS[int(d)] for d in str(n).zfill(zero_pad))
-
-def spell_prefix(prefix):
-    """'CK' → 'C K'  |  'A' → 'A'"""
-    return ' '.join(list(prefix.upper()))
-
-def make_sentence(prefix, number, loket):
-    """Full natural sentence for edge_tts."""
-    return (
-        f"Nomor antrian {spell_prefix(prefix)}, "
-        f"{spell_number(number)}, "
-        f"silakan menuju loket {LOKET_WORDS[loket]}"
-    )
-
-def make_filename(prefix, number, loket):
-    """'A', 1, 1 → 'a-001_loket1.mp3'"""
-    code = f"{prefix.lower()}-{number:03d}"
-    return f"{code}_loket{loket}.mp3"
-
-# ── Static audio files (counter names + core phrases) ────────────────────────
-STATIC_CATALOGUE = [
-    # Core sequence phrases
-    ('nomor-antrian.mp3',     'Nomor antrian'),
-    ('menuju-loket.mp3',      'menuju loket'),
-    # Digits 0–9
-    ('0.mp3', 'nol'),   ('1.mp3', 'satu'),  ('2.mp3', 'dua'),
-    ('3.mp3', 'tiga'),  ('4.mp3', 'empat'), ('5.mp3', 'lima'),
-    ('6.mp3', 'enam'),  ('7.mp3', 'tujuh'), ('8.mp3', 'delapan'),
-    ('9.mp3', 'sembilan'),
-    # Single-letter prefixes a–z
-    *[(f'{c}.mp3', c.upper()) for c in 'abcdefghijklmnopqrstuvwxyz'],
-    # Counter name — full spoken phrase (matches COUNTER_MAP in speechEngine.js)
-    ('ilmu-pemerintahan.mp3',  'Ilmu Pemerintahan'),
-    ('administrasi-publik.mp3','Administrasi Publik'),
-    ('ilmu-komunikasi-1.mp3',  'Ilmu Komunikasi satu'),
-    ('ilmu-komunikasi-2.mp3',  'Ilmu Komunikasi dua'),
-    ('ktu.mp3',                'K T U'),
+COUNTERS = [
+    ("IP",  "Ilmu Pemerintahan"),
+    ("AP",  "Administrasi Publik"),
+    ("IK1", "Ilmu Komunikasi 1"),
+    ("IK2", "Ilmu Komunikasi 2"),
+    ("KTU", "KTU"),
 ]
 
-# ── Build full catalogue ─────────────────────────────────────────────────────
-def build_catalogue():
-    entries = list(STATIC_CATALOGUE)
-    for prefix in PREFIXES:
-        for number in NUMBER_RANGE:
-            for loket in LOKETS:
-                filename = make_filename(prefix, number, loket)
-                sentence = make_sentence(prefix, number, loket)
-                entries.append((filename, sentence))
-    return entries
+# ── Generator ──────────────────────────────────────────────────────────────────
 
-# ── Generate ─────────────────────────────────────────────────────────────────
-async def generate():
+async def generate_one(code: str, name: str, num: str, force: bool) -> bool:
+    filename = f"{code.lower()}-{num}.mp3"
+    path     = os.path.join(OUTPUT_DIR, filename)
+
+    if not force and os.path.exists(path) and os.path.getsize(path) > 0:
+        return False  # skipped
+
+    text = f"Nomor antrian {code} {num}, silakan menuju loket {name}"
+
+    try:
+        communicate = edge_tts.Communicate(text=text, voice=VOICE, rate=RATE)
+        await communicate.save(path)
+        print(f"  [OK]  {filename}")
+        return True
+    except Exception as exc:
+        print(f"  [ERR] {filename}  → {exc}")
+        return False
+
+
+async def generate_counter(code: str, name: str, force: bool) -> dict:
+    print(f"\n[{code}]  {name}")
+    generated = skipped = errors = 0
+
+    for n in range(1, 101):
+        num = str(n).zfill(3)
+        result = await generate_one(code, name, num, force)
+        if result is True:
+            generated += 1
+        elif result is False:
+            skipped += 1
+        else:
+            errors += 1
+
+    print(f"  → generated: {generated}  skipped: {skipped}  errors: {errors}")
+    return {"generated": generated, "skipped": skipped, "errors": errors}
+
+
+# ── Main ───────────────────────────────────────────────────────────────────────
+
+async def main() -> None:
+    force = "--force" in sys.argv
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    catalogue = build_catalogue()
+    bar = "═" * 56
+    print(bar)
+    print("  SIANFIS — Per-Queue Audio Generator")
+    print(f"  Output : {OUTPUT_DIR}")
+    print(f"  Voice  : {VOICE}   Rate: {RATE}")
+    print(f"  Files  : {len(COUNTERS)} counters × 100 numbers = 500 files")
+    print(f"  Mode   : {'FORCE — regenerate all' if force else 'skip existing files'}")
+    print(bar)
 
-    print(f"[DIR]   {OUTPUT_DIR}")
-    print(f"[VOICE] {VOICE}")
-    print(f"[TOTAL] {len(catalogue)} files\n")
+    total_generated = total_skipped = total_errors = 0
 
-    success = 0
-    skipped = 0
+    for code, name in COUNTERS:
+        result = await generate_counter(code, name, force)
+        total_generated += result["generated"]
+        total_skipped   += result["skipped"]
+        total_errors    += result["errors"]
 
-    for filename, text in catalogue:
-        path = os.path.join(OUTPUT_DIR, filename)
+    print(f"\n{bar}")
+    print(f"  Generated : {total_generated}")
+    print(f"  Skipped   : {total_skipped}  (already exist)")
+    print(f"  Errors    : {total_errors}")
+    print(f"  Total     : {total_generated + total_skipped + total_errors} / 500")
+    print(f"\n  Next steps:")
+    print(f"    php artisan storage:link")
+    print(f"    http://localhost/storage/audio/ip-001.mp3")
+    print(bar)
 
-        # Skip jika sudah ada (re-run aman)
-        if os.path.exists(path) and os.path.getsize(path) > 0:
-            skipped += 1
-            continue
+    if total_errors:
+        sys.exit(1)
 
-        try:
-            communicate = edge_tts.Communicate(text=text, voice=VOICE, rate=RATE)
-            await communicate.save(path)
-            print(f"[OK]  {filename}  → \"{text}\"")
-            success += 1
-        except Exception as e:
-            print(f"[ERR] {filename}  → {e}")
-
-    print("\n" + "═"*56)
-    print(f"  Generated : {success}")
-    print(f"  Skipped   : {skipped}  (already exist)")
-    print(f"  Total     : {len(catalogue)}")
-    print(f"  Output    : {OUTPUT_DIR}")
-    print("═"*56)
-    print("\nNext steps:")
-    print("  php artisan storage:link")
-    print("  http://localhost/storage/audio/a-001_loket1.mp3")
 
 if __name__ == "__main__":
-    asyncio.run(generate())
+    asyncio.run(main())

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(git restore:*)",
-      "Bash(php artisan:*)"
+      "Bash(php artisan:*)",
+      "Bash(python:*)"
     ]
   }
 }

@@ -1,32 +1,51 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { publicApi } from '@/services/api';
-import { Users, Clock, RefreshCw, ArrowLeft, LogOut, WifiOff, Maximize, Minimize, Video, MapPin, Volume2 } from 'lucide-react';
+import { Volume2, WifiOff, RefreshCw, ArrowLeft, LogOut, Maximize, Minimize } from 'lucide-react';
 import { initSpeechEngine, playAntrian, unlockAudioSystem } from '@/lib/speechEngine';
 
-const FISIPOL_PINK = '#FF00BB';
+// ── Design tokens ──────────────────────────────────────────────────────────────
+const BLUE     = '#0369a1';
+const LIGHT_BG = 'linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)';
+const TEXT      = '#1e293b';
+const SUBTEXT   = '#64748b';
+const CARD_BG   = '#ffffff';
+const CARD_BOR  = '#e2e8f0';
 
+// ── Hardcoded counter definitions for bottom info cards ────────────────────────
+const BOTTOM_COUNTERS = [
+  { code: 'IP',  name: 'Ilmu Pemerintahan' },
+  { code: 'AP',  name: 'Administrasi Publik' },
+  { code: 'IK1', name: 'Ilmu Komunikasi 1' },
+  { code: 'IK2', name: 'Ilmu Komunikasi 2' },
+  { code: 'KTU', name: 'KTU' },
+];
+
+// ── PublicDisplay ──────────────────────────────────────────────────────────────
 const PublicDisplay = () => {
   const navigate = useNavigate();
-  const [displayData, setDisplayData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // ── State ─────────────────────────────────────────────────────────────────────
+  const [displayData,        setDisplayData]        = useState(null);
+  const [loading,            setLoading]            = useState(true);
+  const [error,              setError]              = useState(null);
+  const [isFullscreen,       setIsFullscreen]       = useState(false);
   const [youtubePlaylistUrl, setYoutubePlaylistUrl] = useState(null);
-  const [showUnlockScreen, setShowUnlockScreen] = useState(true);
+  const [showUnlockScreen,   setShowUnlockScreen]   = useState(true);
+  const [displayMode,        setDisplayMode]        = useState('queue');
+  const [externalVideoUrl,   setExternalVideoUrl]   = useState(null);
+  const [videoSound,         setVideoSound]         = useState(false);
+  const [currentTime,        setCurrentTime]        = useState(new Date());
+  const [lastCalledByCode,   setLastCalledByCode]   = useState({});
 
-  // Display mode settings
-  const [displayMode, setDisplayMode] = useState('queue');
-  const [externalVideoUrl, setExternalVideoUrl] = useState(null);
-  const [videoSound, setVideoSound] = useState(false);
-
-  const lastQueueId = useRef(null);
+  const lastQueueId        = useRef(null);
   const pollingIntervalRef = useRef(null);
-  const speechInitialized = useRef(false);
-  const unlockBtnRef = useRef(null);
+  const speechInitialized  = useRef(false);
+  const unlockBtnRef       = useRef(null);
 
   const isAdmin = localStorage.getItem('admin_token');
 
+  // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
@@ -34,97 +53,95 @@ const PublicDisplay = () => {
   };
 
   const handleUnlockAudio = async () => {
-    console.log('[Display] User clicked to unlock audio');
     const success = await unlockAudioSystem();
-
     if (success) {
       setShowUnlockScreen(false);
       window.dispatchEvent(new Event('audioUnlocked'));
-    } else {
-      console.error('[Display] Failed to unlock audio, please try again');
     }
   };
 
-  // Auto-focus unlock button on load (Google TV remote needs focusable element)
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  // ── Effects ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (showUnlockScreen) {
       setTimeout(() => unlockBtnRef.current?.focus(), 500);
     }
   }, [showUnlockScreen]);
 
-  // Global Enter key listener — failsafe for Google TV remote
   useEffect(() => {
     if (!showUnlockScreen) return;
     const handler = (e) => {
-      if (e.key === 'Enter' || e.keyCode === 13) {
-        handleUnlockAudio();
-      }
+      if (e.key === 'Enter' || e.keyCode === 13) handleUnlockAudio();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [showUnlockScreen]);
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
   useEffect(() => {
     if (!speechInitialized.current) {
-      console.log('[Display] Initializing speech system...');
       initSpeechEngine();
       speechInitialized.current = true;
     }
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // ── Fetch functions ───────────────────────────────────────────────────────────
   const fetchAppSettings = async () => {
     try {
-      const response = await publicApi.getAppSettings();
-      if (response.data.success && response.data.data.youtube_playlist_url) {
-        setYoutubePlaylistUrl(response.data.data.youtube_playlist_url);
-        console.log('[Display] YouTube playlist loaded');
+      const res = await publicApi.getAppSettings();
+      if (res.data.success && res.data.data.youtube_playlist_url) {
+        setYoutubePlaylistUrl(res.data.data.youtube_playlist_url);
       }
-    } catch (err) {
-      console.error('[Display] Failed to fetch app settings:', err);
-    }
+    } catch {}
   };
 
   const fetchDisplaySettings = async () => {
     try {
-      const response = await publicApi.getDisplaySettings();
-      if (response.data.success) {
-        setDisplayMode(response.data.data.display_mode);
-        setExternalVideoUrl(response.data.data.external_video_url);
-        setVideoSound(response.data.data.video_sound || false);
-        console.log('[Display] Display mode:', response.data.data.display_mode, 'Sound:', response.data.data.video_sound);
+      const res = await publicApi.getDisplaySettings();
+      if (res.data.success) {
+        setDisplayMode(res.data.data.display_mode);
+        setExternalVideoUrl(res.data.data.external_video_url);
+        setVideoSound(res.data.data.video_sound || false);
       }
-    } catch (err) {
-      console.error('[Display] Failed to fetch display settings:', err);
-    }
+    } catch {}
   };
 
   const fetchDisplayData = async () => {
     try {
       setError(null);
-      const response = await publicApi.getDisplayData();
-      const data = response.data.data;
+      const res  = await publicApi.getDisplayData();
+      const data = res.data.data;
 
-      if (data.current && data.current.queue_id) {
-        if (data.current.queue_id !== lastQueueId.current) {
-          console.log('[Display] Queue changed from', lastQueueId.current, 'to', data.current.queue_id);
+      if (data.current?.queue_id && data.current.queue_id !== lastQueueId.current) {
+        lastQueueId.current = data.current.queue_id;
+        playAntrian(data.current.queue_number);
+      }
 
-          lastQueueId.current = data.current.queue_id;
-
-          playAntrian(data.current.queue_number, data.current.counter_name);
-        }
+      // Track last-called queue number per counter code
+      if (data.current?.queue_number) {
+        const code = data.current.queue_number.split('-')[0];
+        setLastCalledByCode(prev => ({ ...prev, [code]: data.current.queue_number }));
       }
 
       setDisplayData(data);
     } catch (err) {
-      console.error('[Display] Failed to fetch display data:', err);
       setError('Gagal mengambil data dari server. Pastikan server berjalan.');
     } finally {
       setLoading(false);
@@ -132,8 +149,6 @@ const PublicDisplay = () => {
   };
 
   useEffect(() => {
-    console.log('[Display] Starting display page...');
-
     fetchAppSettings();
     fetchDisplaySettings();
     fetchDisplayData();
@@ -143,463 +158,501 @@ const PublicDisplay = () => {
       fetchDisplayData();
     }, 2000);
 
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        console.log('[Display] Polling stopped');
-      }
-    };
+    return () => clearInterval(pollingIntervalRef.current);
   }, []);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
-  const [currentTime, setCurrentTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
+  // ── URL helpers ───────────────────────────────────────────────────────────────
   const extractPlaylistId = (url) => {
     if (!url) return null;
-    const match = url.match(/[?&]list=([^&]+)/);
-    return match ? match[1] : null;
+    const m = url.match(/[?&]list=([^&]+)/);
+    return m ? m[1] : null;
   };
 
   const extractVideoId = (url) => {
     if (!url) return null;
-    // Handle various YouTube URL formats
     const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/]+)/,
-      /youtube\.com\/watch\?.*v=([^&]+)/
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/,
+      /youtube\.com\/watch\?.*v=([^&]+)/,
     ];
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
+    for (const p of patterns) {
+      const m = url.match(p);
+      if (m) return m[1];
     }
     return null;
   };
 
-  const playlistId = extractPlaylistId(youtubePlaylistUrl);
+  const playlistId      = extractPlaylistId(youtubePlaylistUrl);
   const youtubeEmbedUrl = playlistId
     ? `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1`
     : null;
 
-  const externalVideoId = extractVideoId(externalVideoUrl);
+  const externalVideoId       = extractVideoId(externalVideoUrl);
   const externalVideoEmbedUrl = externalVideoId
     ? `https://www.youtube.com/embed/${externalVideoId}?autoplay=1&mute=${videoSound ? '0' : '1'}&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1&playlist=${externalVideoId}`
     : null;
 
+  // ── Loading state ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div
-        className="h-screen flex flex-col items-center justify-center gap-6 relative"
-        style={{
-          backgroundImage: "url('/assets/bgtech.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/75 to-black/80" />
-        <div className="relative z-10 flex flex-col items-center justify-center gap-6">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 rounded-full" style={{ borderColor: 'rgba(255,0,187,0.3)' }} />
-            <div className="w-20 h-20 border-4 border-t-transparent rounded-full animate-spin absolute top-0 left-0" style={{ borderColor: FISIPOL_PINK }} />
-          </div>
-          <p className="text-white text-xl font-semibold">Memuat data...</p>
-        </div>
+      <div style={{ width: '100vw', height: '100vh', background: LIGHT_BG,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 24, fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ width: 64, height: 64, border: `4px solid ${BLUE}`,
+          borderTopColor: 'transparent', borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ color: TEXT, fontSize: 20 }}>Memuat data...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
+  // ── Error state ───────────────────────────────────────────────────────────────
   if (error && !displayData) {
     return (
-      <div
-        className="h-screen flex items-center justify-center p-4 relative"
-        style={{
-          backgroundImage: "url('/assets/bgtech.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/75 to-black/80" />
-        <div className="relative z-10 text-center max-w-md">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-red-500/20 mb-6 border-2 border-red-500/50">
-            <WifiOff className="w-12 h-12 text-red-400" />
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-3">Koneksi Gagal</h2>
-          <p className="text-gray-300 mb-8">{error}</p>
-          <button
-            onClick={fetchDisplayData}
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-white transition-all hover:scale-105 shadow-lg"
-            style={{ background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)` }}
-          >
-            <RefreshCw className="w-5 h-5" />
-            Coba Lagi
-          </button>
-        </div>
+      <div style={{ width: '100vw', height: '100vh', background: LIGHT_BG,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexDirection: 'column', gap: 20, fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
+        <WifiOff style={{ width: 64, height: 64, color: '#ef4444' }} />
+        <p style={{ color: TEXT, fontSize: 28, fontWeight: 700 }}>Koneksi Gagal</p>
+        <p style={{ color: SUBTEXT, fontSize: 18, maxWidth: 480 }}>{error}</p>
+        <button
+          onClick={fetchDisplayData}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 36px',
+            background: `linear-gradient(135deg, ${BLUE}, #075985)`, color: '#fff',
+            border: 'none', borderRadius: 12, fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>
+          <RefreshCw style={{ width: 20, height: 20 }} />
+          Coba Lagi
+        </button>
       </div>
     );
   }
 
   const { current, stats } = displayData || {};
 
-  // VIDEO MODE: Show fullscreen video only
+  // ── VIDEO MODE ────────────────────────────────────────────────────────────────
   if (displayMode === 'video' && externalVideoEmbedUrl) {
     return (
-      <div className="h-screen w-screen bg-black relative overflow-hidden">
-        {/* Fullscreen Video */}
-        <iframe
-          src={externalVideoEmbedUrl}
-          className="absolute inset-0 w-full h-full"
-          style={{
-            pointerEvents: 'none',
-            border: 'none',
-          }}
-          allow="autoplay; encrypted-media"
-          title="Idle Video Display"
-        />
-
-        {/* Admin floating buttons (only when logged in) */}
-        {isAdmin && !isFullscreen && (
-          <div className="fixed bottom-6 left-6 z-50 flex gap-3 animate-slide-up">
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="flex items-center gap-2 px-5 py-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl hover:bg-black/80 transition-all text-white font-semibold text-sm shadow-2xl"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Dashboard
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-5 py-3 bg-red-500/80 backdrop-blur-md text-white rounded-xl hover:bg-red-600 transition-all font-semibold text-sm shadow-2xl border border-red-400/30"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
-        )}
+      <div style={{ width: '100vw', height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
+        <iframe src={externalVideoEmbedUrl}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%',
+            border: 'none', pointerEvents: 'none' }}
+          allow="autoplay; encrypted-media" title="Video Display" />
+        {isAdmin && !isFullscreen && <AdminButtons navigate={navigate} handleLogout={handleLogout} />}
       </div>
     );
   }
 
-  // QUEUE MODE: Show normal queue display UI
+  // ── QUEUE MODE ────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="h-screen text-white relative overflow-hidden flex flex-col"
-      style={{
-        backgroundImage: "url('/assets/bgtech.jpg')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
-      {/* Dark overlay for text clarity */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/75 to-black/80 pointer-events-none" />
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      background: LIGHT_BG,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      fontFamily: "'Segoe UI', Arial, sans-serif",
+      color: TEXT,
+      WebkitFontSmoothing: 'antialiased',
+    }}>
 
-      {/* Audio Unlock Screen */}
+      {/* ── Audio Unlock Overlay ──────────────────────────────────────────────── */}
       {showUnlockScreen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.93)',
-            backdropFilter: 'blur(12px)',
-            width: '100vw',
-            height: '100vh',
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{ textAlign: 'center', maxWidth: '800px', padding: '0 32px' }}>
-            {/* Icon */}
-            <div
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 128,
-                height: 128,
-                borderRadius: '50%',
-                marginBottom: 32,
-                background: 'rgba(255, 0, 187, 0.2)',
-              }}
-            >
-              <Volume2 style={{ width: 64, height: 64, color: FISIPOL_PINK }} />
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(15, 23, 42, 0.95)',
+        }}>
+          <div style={{ textAlign: 'center', maxWidth: 720, padding: '0 32px' }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 120, height: 120, borderRadius: '50%', marginBottom: 32,
+              border: `2px solid ${BLUE}40`,
+              background: `${BLUE}20`,
+            }}>
+              <Volume2 style={{ width: 56, height: 56, color: '#38bdf8' }} />
             </div>
 
-            {/* Title */}
-            <h1 style={{
-              fontSize: 48,
-              fontWeight: 900,
-              color: '#ffffff',
-              marginBottom: 16,
-              lineHeight: 1.2,
-            }}>
+            <h1 style={{ fontSize: 48, fontWeight: 900, color: '#fff',
+              marginBottom: 16, lineHeight: 1.2, margin: '0 0 16px' }}>
               Sistem Antrian SIANFIS
             </h1>
-
-            {/* Subtitle */}
-            <p style={{
-              fontSize: 20,
-              color: 'rgba(255,255,255,0.65)',
-              marginBottom: 40,
-            }}>
+            <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.6)',
+              marginBottom: 40, margin: '0 0 40px' }}>
               Tekan tombol atau OK pada remote untuk mengaktifkan suara
             </p>
 
-            {/* Button */}
             <button
               ref={unlockBtnRef}
               onClick={handleUnlockAudio}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.keyCode === 13) handleUnlockAudio(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleUnlockAudio(); }}
               tabIndex={0}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 16,
-                padding: '24px 48px',
-                background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)`,
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: 16,
-                fontSize: 24,
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: `0 8px 32px ${FISIPOL_PINK}60`,
+                display: 'inline-flex', alignItems: 'center', gap: 14,
+                padding: '22px 52px',
+                background: `linear-gradient(135deg, ${BLUE}, #075985)`,
+                color: '#fff', border: 'none', borderRadius: 14,
+                fontSize: 24, fontWeight: 700, cursor: 'pointer',
+                boxShadow: `0 6px 28px ${BLUE}50`,
                 outline: 'none',
               }}
-              onFocus={e => {
-                e.currentTarget.style.outline = `3px solid ${FISIPOL_PINK}`;
-                e.currentTarget.style.outlineOffset = '4px';
-              }}
-              onBlur={e => {
-                e.currentTarget.style.outline = 'none';
-                e.currentTarget.style.outlineOffset = '0';
-              }}
+              onFocus={e  => { e.currentTarget.style.outline = `3px solid #38bdf8`; e.currentTarget.style.outlineOffset = '4px'; }}
+              onBlur={e   => { e.currentTarget.style.outline = 'none'; e.currentTarget.style.outlineOffset = '0'; }}
             >
-              <Volume2 style={{ width: 32, height: 32 }} />
+              <Volume2 style={{ width: 28, height: 28 }} />
               Aktifkan Suara
             </button>
 
-            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', marginTop: 24 }}>
+            <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.3)', marginTop: 20 }}>
               Diperlukan sekali saat pertama membuka display
             </p>
           </div>
         </div>
       )}
 
-      <div className="relative z-10 p-4 md:p-6 flex flex-col h-full">
-        {/* Header */}
-        <header className="flex justify-between items-center mb-6 animate-fade-in flex-shrink-0 bg-black/40 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-          <div className="flex items-center gap-4">
-            <img src="/assets/LOGO_UMA.png" alt="Logo" className="h-12 md:h-16 object-contain drop-shadow-lg" />
-            <img src="/assets/unggul.png" alt="Logo" className="h-12 md:h-16 object-contain drop-shadow-lg" />
-            {/* FISIPOL accent bar */}
-            <div className="hidden md:block h-12 w-1 rounded-full ml-2" style={{ background: FISIPOL_PINK }} />
-            <div className="hidden md:block">
-              <p className="text-lg font-black tracking-wider" style={{ color: FISIPOL_PINK }}>
-                FISIPOL UMA
-              </p>
-              <p className="text-xs text-white/60 font-medium">Sistem Antrian Digital</p>
+      {/* ── HEADER ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        height: 72,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 32px',
+        background: 'rgba(255,255,255,0.85)',
+        borderBottom: `1px solid ${CARD_BOR}`,
+        flexShrink: 0,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+      }}>
+        {/* Left: logos + title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src="/assets/LOGO_UMA.png" alt="Logo" style={{ height: 48, objectFit: 'contain' }} />
+          <img src="/assets/unggul.png"   alt="Logo" style={{ height: 48, objectFit: 'contain' }} />
+          <div style={{ width: 2, height: 40, background: BLUE, borderRadius: 2, margin: '0 8px' }} />
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: BLUE, letterSpacing: 1 }}>
+              FISIPOL UMA
             </div>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl md:text-4xl font-mono font-black tracking-wider text-white drop-shadow-lg">
-              {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </p>
-            <p className="text-white/70 text-sm md:text-base font-medium">
-              {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </p>
-          </div>
-        </header>
-
-        {/* Main Grid */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
-          {/* Left: Video/YouTube panel */}
-          <div className="lg:col-span-2 animate-slide-up min-h-0">
-            <div className="bg-black/30 backdrop-blur-md rounded-3xl h-full flex flex-col justify-center items-center border border-white/10 shadow-2xl overflow-hidden relative">
-              {youtubeEmbedUrl ? (
-                <iframe
-                  src={youtubeEmbedUrl}
-                  className="absolute inset-0 w-full h-full"
-                  style={{
-                    pointerEvents: 'none',
-                    border: 'none',
-                  }}
-                  allow="autoplay"
-                  title="YouTube Playlist Background"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-black/50 to-black/30">
-                  <div className="text-center animate-fade-in p-8">
-                    <div className="inline-flex items-center justify-center w-28 h-28 rounded-full mb-6 bg-white/5 border-2 border-white/10">
-                      <Video className="w-14 h-14 text-white/30" />
-                    </div>
-                    <p className="text-2xl text-white/70 font-semibold">Background Display</p>
-                    <p className="text-sm text-white/40 mt-2">Set YouTube Playlist di pengaturan</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Queue info panel */}
-          <div className="flex flex-col gap-3 min-h-0">
-            {/* Queue number card */}
-            <div className="bg-black/40 backdrop-blur-md rounded-3xl p-6 shadow-2xl animate-slide-up flex-shrink-0 border border-white/10">
-              <h3 className="text-base font-bold mb-4 flex items-center gap-3 text-white/90">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${FISIPOL_PINK}20` }}>
-                  <MapPin className="w-5 h-5" style={{ color: FISIPOL_PINK }} />
-                </div>
-                Nomor Antrian Dipanggil
-              </h3>
-
-              {current ? (
-                <div className="text-center animate-scale-in">
-                  <div className="queue-display relative mb-4">
-                    <div className="absolute inset-0 blur-3xl rounded-full opacity-50" style={{ background: FISIPOL_PINK }} />
-                    <p
-                      className="text-[72px] md:text-[96px] lg:text-[120px] font-black leading-none relative"
-                      style={{
-                        color: FISIPOL_PINK,
-                        textShadow: `0 0 40px ${FISIPOL_PINK}80, 0 0 80px ${FISIPOL_PINK}40`
-                      }}
-                    >
-                      {current.queue_number}
-                    </p>
-                  </div>
-
-                  <div
-                    className="rounded-2xl px-8 py-5 shadow-2xl border border-white/20"
-                    style={{ background: `linear-gradient(135deg, ${FISIPOL_PINK} 0%, #CC0099 100%)` }}
-                  >
-                    <p className="text-sm text-white/90 mb-2 font-bold tracking-wider">SILAKAN MENUJU</p>
-                    <p className="text-4xl md:text-5xl font-black text-white tracking-wide">
-                      LOKET {current.counter_number}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/20">
-                    <p className="text-base text-white/80 font-semibold">
-                      {current.service_name}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center animate-fade-in py-8">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-white/5 border-2 border-white/10">
-                    <Clock className="w-10 h-10 text-white/30" />
-                  </div>
-                  <p className="text-6xl font-black text-white/20 mb-3">---</p>
-                  <p className="text-base text-white/50 font-medium">Menunggu panggilan</p>
-                </div>
-              )}
-            </div>
-
-            {/* Stats card */}
-            <div className="bg-black/40 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-white/10 animate-slide-up flex-shrink-0">
-              <h3 className="text-base font-bold mb-3 flex items-center gap-3 text-white/90">
-                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white/70" />
-                </div>
-                Statistik Hari Ini
-              </h3>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-amber-500/20 backdrop-blur-sm rounded-xl p-3 text-center border border-amber-500/30">
-                  <p className="text-2xl md:text-3xl font-black text-amber-400">{stats?.waiting || 0}</p>
-                  <p className="text-xs text-white/60 font-medium mt-1">Menunggu</p>
-                </div>
-                <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-3 text-center border border-green-500/30">
-                  <p className="text-2xl md:text-3xl font-black text-green-400">{stats?.done || 0}</p>
-                  <p className="text-xs text-white/60 font-medium mt-1">Selesai</p>
-                </div>
-                <div className="bg-blue-500/20 backdrop-blur-sm rounded-xl p-3 text-center border border-blue-500/30">
-                  <p className="text-2xl md:text-3xl font-black text-blue-400">{stats?.called || 0}</p>
-                  <p className="text-xs text-white/60 font-medium mt-1">Dipanggil</p>
-                </div>
-                <div className="backdrop-blur-sm rounded-xl p-3 text-center border" style={{ background: `${FISIPOL_PINK}20`, borderColor: `${FISIPOL_PINK}40` }}>
-                  <p className="text-2xl md:text-3xl font-black" style={{ color: FISIPOL_PINK }}>{stats?.total || 0}</p>
-                  <p className="text-xs text-white/60 font-medium mt-1">Total</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Controls card */}
-            <div className="bg-black/40 backdrop-blur-md rounded-3xl p-4 shadow-2xl border border-white/10 animate-slide-up flex-shrink-0">
-              <h3 className="text-base font-bold mb-3 text-white/90">Kontrol</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={toggleFullscreen}
-                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-white font-semibold text-sm w-full justify-center border border-white/20 backdrop-blur-sm"
-                >
-                  {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                  {isFullscreen ? 'Keluar Fullscreen' : 'Fullscreen'}
-                </button>
-              </div>
+            <div style={{ fontSize: 13, color: SUBTEXT, marginTop: 1 }}>
+              Sistem Informasi Antrian Digital
             </div>
           </div>
         </div>
 
-        {/* Marquee ticker */}
-        <div className="mt-4 rounded-2xl py-3 px-6 overflow-hidden border animate-fade-in flex-shrink-0 bg-black/40 backdrop-blur-md shadow-lg" style={{ borderColor: `${FISIPOL_PINK}30` }}>
-          <div className="animate-marquee whitespace-nowrap">
-            <span className="text-white/70 text-base font-medium">
-              • Harap menunggu dengan tertib • Nomor antrian akan dipanggil secara berurutan •
-              Pastikan Anda berada di area tunggu • Terima kasih atas kesabaran Anda •
-              SIANFIS - Sistem Informasi Antrian Fisipol •
-            </span>
+        {/* Right: clock */}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{
+            fontSize: 38, fontWeight: 900, fontFamily: 'monospace',
+            letterSpacing: 2, lineHeight: 1, color: TEXT,
+          }}>
+            {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div style={{ fontSize: 14, color: SUBTEXT, marginTop: 3 }}>
+            {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </div>
         </div>
-
-        <footer className="mt-3 text-center text-white/40 text-sm flex-shrink-0 font-medium">
-          <p>Sistem Antrian Digital © 2026 • SIANFIS - Sistem Informasi Antrian Fisipol</p>
-        </footer>
       </div>
 
-      {/* Admin floating buttons */}
+      {/* ── MAIN BODY ────────────────────────────────────────────────────────── */}
+      <div style={{
+        flex: 1,
+        display: 'grid',
+        gridTemplateColumns: '60% 40%',
+        minHeight: 0,
+      }}>
+
+        {/* LEFT PANEL — Current queue ─────────────────────────────────────── */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '24px 40px',
+          borderRight: `1px solid ${CARD_BOR}`,
+          gap: 0,
+        }}>
+
+          {/* Section label */}
+          <div style={{
+            fontSize: 16, fontWeight: 700, letterSpacing: 3,
+            color: SUBTEXT, textTransform: 'uppercase',
+            marginBottom: 16,
+          }}>
+            Nomor Antrian Dipanggil
+          </div>
+
+          {current ? (
+            <>
+              {/* Queue number — BIG */}
+              <div style={{
+                fontSize: 140, fontWeight: 900, lineHeight: 1,
+                color: BLUE,
+                marginBottom: 24,
+                letterSpacing: 2,
+              }}>
+                {current.queue_number}
+              </div>
+
+              {/* Counter badge */}
+              <div style={{
+                background: `linear-gradient(135deg, ${BLUE}, #075985)`,
+                borderRadius: 14, padding: '14px 48px',
+                textAlign: 'center', marginBottom: 20,
+                boxShadow: `0 4px 20px ${BLUE}30`,
+              }}>
+                <div style={{ fontSize: 14, letterSpacing: 3, color: 'rgba(255,255,255,0.85)', marginBottom: 4 }}>
+                  SILAKAN MENUJU
+                </div>
+                <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, color: '#fff' }}>
+                  {current.counter_name || `Loket ${current.counter_number}`}
+                </div>
+              </div>
+
+              {/* Service name */}
+              <div style={{
+                fontSize: 22, fontWeight: 600,
+                color: TEXT, marginBottom: 8,
+              }}>
+                {current.service_name}
+              </div>
+
+              {/* Called time */}
+              {current.called_at && (
+                <div style={{ fontSize: 16, color: SUBTEXT }}>
+                  Dipanggil pukul {current.called_at}
+                </div>
+              )}
+
+              {/* Mini stats row */}
+              <div style={{
+                display: 'flex', gap: 24, marginTop: 28,
+                padding: '12px 28px',
+                background: CARD_BG,
+                borderRadius: 10,
+                border: `1px solid ${CARD_BOR}`,
+                boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+              }}>
+                <StatBit label="Menunggu" value={stats?.waiting ?? 0} color="#d97706" />
+                <div style={{ width: 1, background: CARD_BOR }} />
+                <StatBit label="Selesai"  value={stats?.done    ?? 0} color="#16a34a" />
+                <div style={{ width: 1, background: CARD_BOR }} />
+                <StatBit label="Total"    value={stats?.total   ?? 0} color={BLUE} />
+              </div>
+            </>
+          ) : (
+            /* Empty state */
+            <>
+              <div style={{
+                fontSize: 120, fontWeight: 900, color: '#cbd5e1',
+                lineHeight: 1, marginBottom: 20,
+              }}>
+                – – –
+              </div>
+              <div style={{ fontSize: 24, color: SUBTEXT }}>
+                Menunggu panggilan...
+              </div>
+              {stats && (
+                <div style={{
+                  display: 'flex', gap: 24, marginTop: 28,
+                  padding: '12px 28px',
+                  background: CARD_BG,
+                  borderRadius: 10,
+                  border: `1px solid ${CARD_BOR}`,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                }}>
+                  <StatBit label="Menunggu" value={stats.waiting} color="#d97706" />
+                  <div style={{ width: 1, background: CARD_BOR }} />
+                  <StatBit label="Selesai"  value={stats.done}    color="#16a34a" />
+                  <div style={{ width: 1, background: CARD_BOR }} />
+                  <StatBit label="Total"    value={stats.total}   color={BLUE} />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* RIGHT PANEL — YouTube or stats ────────────────────────────────── */}
+        <div style={{
+          position: 'relative', overflow: 'hidden',
+          padding: 16,
+          display: 'flex', alignItems: 'stretch',
+        }}>
+          {youtubeEmbedUrl ? (
+            <div style={{
+              flex: 1, borderRadius: 16, overflow: 'hidden',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+            }}>
+              <iframe
+                src={youtubeEmbedUrl}
+                style={{ width: '100%', height: '100%', border: 'none', pointerEvents: 'none', display: 'block' }}
+                allow="autoplay"
+                title="YouTube Playlist"
+              />
+            </div>
+          ) : (
+            <StatsPanel stats={stats} />
+          )}
+        </div>
+      </div>
+
+      {/* ── BOTTOM — Per-counter info cards ───────────────────────────────── */}
+      <div style={{
+        height: 112,
+        display: 'flex', alignItems: 'center',
+        padding: '0 24px', gap: 12,
+        background: 'rgba(255,255,255,0.8)',
+        borderTop: `1px solid ${CARD_BOR}`,
+        flexShrink: 0,
+      }}>
+        {BOTTOM_COUNTERS.map((counter) => {
+          const lastCalled = lastCalledByCode[counter.code];
+          return (
+            <div key={counter.code} style={{
+              flex: 1,
+              padding: '10px 16px',
+              background: CARD_BG,
+              border: `1px solid ${CARD_BOR}`,
+              borderRadius: 10,
+              textAlign: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              minWidth: 0,
+            }}>
+              <div style={{
+                fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                color: BLUE, textTransform: 'uppercase', marginBottom: 4,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {counter.name}
+              </div>
+              <div style={{
+                fontSize: 32, fontWeight: 900, lineHeight: 1,
+                color: lastCalled ? TEXT : '#cbd5e1',
+              }}>
+                {lastCalled || '–––'}
+              </div>
+              <div style={{ fontSize: 11, color: SUBTEXT, marginTop: 3 }}>
+                Terakhir dipanggil
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── TICKER ───────────────────────────────────────────────────────────── */}
+      <div style={{
+        height: 36,
+        display: 'flex', alignItems: 'center',
+        background: BLUE,
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}>
+        <div style={{
+          animation: 'ticker 30s linear infinite',
+          whiteSpace: 'nowrap',
+          fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 500,
+        }}>
+          &nbsp;&nbsp;&nbsp;
+          • Harap menunggu dengan tertib &nbsp;&nbsp;
+          • Nomor antrian akan dipanggil secara berurutan &nbsp;&nbsp;
+          • Pastikan Anda berada di area tunggu &nbsp;&nbsp;
+          • Terima kasih atas kesabaran Anda &nbsp;&nbsp;
+          • SIANFIS — Sistem Informasi Antrian Fisipol &nbsp;&nbsp;
+        </div>
+      </div>
+
+      {/* ── ADMIN FLOAT BUTTONS ──────────────────────────────────────────────── */}
       {isAdmin && !isFullscreen && (
-        <div className="fixed bottom-6 left-6 z-50 flex gap-3 animate-slide-up">
+        <div style={{
+          position: 'fixed', bottom: 20, left: 20, zIndex: 50,
+          display: 'flex', gap: 10,
+        }}>
           <button
             onClick={() => navigate('/admin/dashboard')}
-            className="flex items-center gap-2 px-5 py-3 bg-black/60 backdrop-blur-md border border-white/20 rounded-xl hover:bg-black/80 transition-all text-white font-semibold text-sm shadow-2xl"
+            style={adminBtnStyle('#1e293b', CARD_BOR)}
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft style={{ width: 16, height: 16 }} />
             Dashboard
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-5 py-3 bg-red-500/80 backdrop-blur-md text-white rounded-xl hover:bg-red-600 transition-all font-semibold text-sm shadow-2xl border border-red-400/30"
+            style={adminBtnStyle('#7f1d1d', '#991b1b')}
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut style={{ width: 16, height: 16 }} />
             Logout
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            style={adminBtnStyle('#1e293b', CARD_BOR)}
+          >
+            {isFullscreen ? <Minimize style={{ width: 16, height: 16 }} /> : <Maximize style={{ width: 16, height: 16 }} />}
+            {isFullscreen ? 'Windowed' : 'Fullscreen'}
           </button>
         </div>
       )}
 
       <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(100%); }
+        @keyframes ticker {
+          0%   { transform: translateX(100vw); }
           100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          animation: marquee 25s linear infinite;
         }
       `}</style>
     </div>
   );
 };
+
+// ── Small helper components ────────────────────────────────────────────────────
+
+const StatBit = ({ label, value, color }) => (
+  <div style={{ textAlign: 'center', minWidth: 52 }}>
+    <div style={{ fontSize: 32, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+    <div style={{ fontSize: 13, color: SUBTEXT, marginTop: 3 }}>{label}</div>
+  </div>
+);
+
+const StatsPanel = ({ stats }) => (
+  <div style={{
+    width: '100%', height: '100%',
+    display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center',
+    padding: 40, gap: 24,
+  }}>
+    <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: 3,
+      color: SUBTEXT, textTransform: 'uppercase', marginBottom: 8 }}>
+      Statistik Hari Ini
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 380 }}>
+      <BigStatCard label="Menunggu"  value={stats?.waiting ?? 0} color="#d97706" bg="#fffbeb"  border="#fde68a"  />
+      <BigStatCard label="Selesai"   value={stats?.done    ?? 0} color="#16a34a" bg="#f0fdf4"  border="#bbf7d0"  />
+      <BigStatCard label="Dipanggil" value={stats?.called  ?? 0} color="#2563eb" bg="#eff6ff"  border="#bfdbfe"  />
+      <BigStatCard label="Total"     value={stats?.total   ?? 0} color={BLUE}    bg="#f0f9ff"  border="#bae6fd"  />
+    </div>
+  </div>
+);
+
+const BigStatCard = ({ label, value, color, bg, border }) => (
+  <div style={{
+    background: bg, border: `1px solid ${border}`,
+    borderRadius: 12, padding: '20px 16px', textAlign: 'center',
+  }}>
+    <div style={{ fontSize: 56, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+    <div style={{ fontSize: 16, color: SUBTEXT, marginTop: 8 }}>{label}</div>
+  </div>
+);
+
+const AdminButtons = ({ navigate, handleLogout }) => (
+  <div style={{ position: 'fixed', bottom: 20, left: 20, zIndex: 50, display: 'flex', gap: 10 }}>
+    <button onClick={() => navigate('/admin/dashboard')} style={adminBtnStyle('#1e293b', '#334155')}>
+      <ArrowLeft style={{ width: 16, height: 16 }} />
+      Dashboard
+    </button>
+    <button onClick={handleLogout} style={adminBtnStyle('#7f1d1d', '#991b1b')}>
+      <LogOut style={{ width: 16, height: 16 }} />
+      Logout
+    </button>
+  </div>
+);
+
+const adminBtnStyle = (bg, border) => ({
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '10px 18px',
+  background: bg, color: '#fff',
+  border: `1px solid ${border}`,
+  borderRadius: 10, fontSize: 14, fontWeight: 600,
+  cursor: 'pointer',
+});
 
 export default PublicDisplay;
