@@ -58,10 +58,10 @@ class AuthController extends Controller
         
         \Log::info('Password check passed');
 
-        if (!$user->isAdmin()) {
+        if (!$user->isAdmin() && !$user->isStaff()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Akses ditolak. Anda bukan admin.',
+                'message' => 'Akses ditolak.',
             ], 403);
         }
 
@@ -72,10 +72,12 @@ class AuthController extends Controller
             'message' => 'Login berhasil',
             'data' => [
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
+                    'id'           => $user->id,
+                    'name'         => $user->name,
+                    'email'        => $user->email,
+                    'role'         => $user->role,
+                    'counter_id'   => $user->counter_id,
+                    'counter_name' => $user->counter?->name,
                 ],
                 'token' => $token,
             ],
@@ -102,13 +104,16 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
+        $user = $request->user()->load('counter');
         return response()->json([
             'success' => true,
             'data' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email,
-                'role' => $request->user()->role,
+                'id'           => $user->id,
+                'name'         => $user->name,
+                'email'        => $user->email,
+                'role'         => $user->role,
+                'counter_id'   => $user->counter_id,
+                'counter_name' => $user->counter?->name,
             ],
         ]);
     }

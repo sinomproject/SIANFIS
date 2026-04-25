@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Counter;
 
 class User extends Authenticatable
 {
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'counter_id',
     ];
 
     /**
@@ -66,5 +68,21 @@ class User extends Authenticatable
     public function isOperator()
     {
         return $this->role === 'operator';
+    }
+
+    /**
+     * Check if user is staff.
+     */
+    public function isStaff(): bool
+    {
+        return $this->role === 'staff';
+    }
+
+    /**
+     * Counter assigned to this staff user.
+     */
+    public function counter()
+    {
+        return $this->belongsTo(Counter::class);
     }
 }

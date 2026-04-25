@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\VideoController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\DisplaySettingController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Staff\StaffController;
 
 /*
 |--------------------------------------------------------------------------
@@ -111,5 +113,20 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/location', [SettingController::class, 'updateLocationSettings']);
         Route::put('/app', [SettingController::class, 'updateAppSettings']);
         Route::put('/audio', [SettingController::class, 'updateAudioSettings']);
+    });
+
+    // User Management (admin only, enforced in controller)
+    Route::prefix('admin/users')->group(function () {
+        Route::get('/',        [UserController::class, 'index']);
+        Route::post('/',       [UserController::class, 'store']);
+        Route::put('/{id}',    [UserController::class, 'update']);
+        Route::delete('/{id}', [UserController::class, 'destroy']);
+    });
+
+    // Staff-specific routes
+    Route::prefix('staff')->group(function () {
+        Route::put('/profile/password', [StaffController::class, 'changePassword']);
+        Route::get('/stats/daily',      [StaffController::class, 'dailyStats']);
+        Route::get('/report/export',    [StaffController::class, 'exportReport']);
     });
 });

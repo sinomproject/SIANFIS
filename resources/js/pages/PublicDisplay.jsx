@@ -97,6 +97,20 @@ const PublicDisplay = () => {
     }
   }, []);
 
+  // Force TV fullscreen layout — prevent any scroll
+  useEffect(() => {
+    const prev = {
+      html: document.documentElement.style.cssText,
+      body: document.body.style.cssText,
+    };
+    document.documentElement.style.cssText += ';overflow:hidden!important;height:100%!important;';
+    document.body.style.cssText += ';overflow:hidden!important;height:100%!important;';
+    return () => {
+      document.documentElement.style.cssText = prev.html;
+      document.body.style.cssText = prev.body;
+    };
+  }, []);
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -194,7 +208,7 @@ const PublicDisplay = () => {
   // ── Loading state ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ width: '100vw', height: '100vh', background: LIGHT_BG,
+      <div style={{ position: 'fixed', inset: 0, background: LIGHT_BG,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 24, fontFamily: 'Arial, sans-serif' }}>
         <div style={{ width: 64, height: 64, border: `4px solid ${BLUE}`,
@@ -209,7 +223,7 @@ const PublicDisplay = () => {
   // ── Error state ───────────────────────────────────────────────────────────────
   if (error && !displayData) {
     return (
-      <div style={{ width: '100vw', height: '100vh', background: LIGHT_BG,
+      <div style={{ position: 'fixed', inset: 0, background: LIGHT_BG,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexDirection: 'column', gap: 20, fontFamily: 'Arial, sans-serif', textAlign: 'center' }}>
         <WifiOff style={{ width: 64, height: 64, color: '#ef4444' }} />
@@ -245,8 +259,8 @@ const PublicDisplay = () => {
   // ── QUEUE MODE ────────────────────────────────────────────────────────────────
   return (
     <div style={{
-      width: '100vw',
-      height: '100vh',
+      position: 'fixed',
+      inset: 0,
       background: LIGHT_BG,
       display: 'flex',
       flexDirection: 'column',
@@ -354,7 +368,9 @@ const PublicDisplay = () => {
         flex: 1,
         display: 'grid',
         gridTemplateColumns: '60% 40%',
+        gridTemplateRows: '1fr',
         minHeight: 0,
+        overflow: 'hidden',
       }}>
 
         {/* LEFT PANEL — Current queue ─────────────────────────────────────── */}
@@ -379,7 +395,7 @@ const PublicDisplay = () => {
             <>
               {/* Queue number — BIG */}
               <div style={{
-                fontSize: 140, fontWeight: 900, lineHeight: 1,
+                fontSize: 110, fontWeight: 900, lineHeight: 1,
                 color: BLUE,
                 marginBottom: 24,
                 letterSpacing: 2,
@@ -466,23 +482,33 @@ const PublicDisplay = () => {
         </div>
 
         {/* RIGHT PANEL — YouTube or stats ────────────────────────────────── */}
-        <div style={{
-          position: 'relative', overflow: 'hidden',
-          padding: 16,
-          display: 'flex', alignItems: 'stretch',
-        }}>
+        <div style={{ position: 'relative', overflow: 'hidden' }}>
           {youtubeEmbedUrl ? (
-            <div style={{
-              flex: 1, borderRadius: 16, overflow: 'hidden',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
-            }}>
-              <iframe
-                src={youtubeEmbedUrl}
-                style={{ width: '100%', height: '100%', border: 'none', pointerEvents: 'none', display: 'block' }}
-                allow="autoplay"
-                title="YouTube Playlist"
-              />
-            </div>
+            <>
+              {/* Rounded wrapper with inset margin */}
+              <div style={{
+                position: 'absolute',
+                top: 12, left: 12, right: 12, bottom: 12,
+                borderRadius: 16,
+                overflow: 'hidden',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+              }}>
+                <iframe
+                  src={youtubeEmbedUrl}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    display: 'block',
+                    pointerEvents: 'none',
+                  }}
+                  allow="autoplay"
+                  title="YouTube Playlist"
+                />
+              </div>
+            </>
           ) : (
             <StatsPanel stats={stats} />
           )}

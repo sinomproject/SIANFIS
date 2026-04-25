@@ -6,7 +6,7 @@ import {
   Users, UserCheck, Clock, CheckCircle,
   LayoutDashboard, FileText, Settings, LogOut,
   RefreshCw, Loader2, Calendar, TrendingUp,
-  ChevronRight, MapPin, Type, Volume2, ImageIcon, Monitor
+  ChevronRight, MapPin, Type, Volume2, ImageIcon, Monitor, Users as UsersIcon
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -172,6 +172,13 @@ const AdminDashboard = () => {
           >
             <Monitor className="w-5 h-5" />
             Display Control
+          </button>
+          <button
+            onClick={() => navigate('/admin/users')}
+            className="material-nav-item w-full"
+          >
+            <UsersIcon className="w-5 h-5" />
+            Manajemen User
           </button>
         </nav>
 

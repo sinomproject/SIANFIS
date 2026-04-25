@@ -17,6 +17,14 @@ import AppSettings from './pages/admin/AppSettings';
 import AudioSettings from './pages/admin/AudioSettings';
 import DisplayBackground from './pages/admin/DisplayBackground';
 import DisplayControl from './pages/admin/DisplayControl';
+import UserManagement from './pages/admin/UserManagement';
+
+// Staff Pages
+import StaffDashboard from './pages/staff/StaffDashboard';
+import StaffQueueManagement from './pages/staff/StaffQueueManagement';
+import StaffWaitingList from './pages/staff/StaffWaitingList';
+import StaffReport from './pages/staff/StaffReport';
+import StaffProfile from './pages/staff/StaffProfile';
 
 function App() {
   return (
@@ -39,6 +47,14 @@ function App() {
         <Route path="/admin/audio-settings" element={<AudioSettings />} />
         <Route path="/admin/display-background" element={<DisplayBackground />} />
         <Route path="/admin/display-control" element={<DisplayControl />} />
+        <Route path="/admin/users" element={<UserManagement />} />
+
+        {/* Staff Routes */}
+        <Route path="/staff/dashboard"    element={<StaffDashboard />} />
+        <Route path="/staff/queue"        element={<StaffQueueManagement />} />
+        <Route path="/staff/waiting-list" element={<StaffWaitingList />} />
+        <Route path="/staff/report"       element={<StaffReport />} />
+        <Route path="/staff/profile"      element={<StaffProfile />} />
       </Routes>
     </BrowserRouter>
   );

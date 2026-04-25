@@ -109,6 +109,38 @@ export const adminApi = {
 
   // Display settings
   updateDisplaySettings: (data) => api.put('/admin/display-settings', data),
+
+  // User Management
+  getUsers:    ()         => api.get('/admin/users'),
+  createUser:  (data)     => api.post('/admin/users', data),
+  updateUser:  (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser:  (id)       => api.delete(`/admin/users/${id}`),
+};
+
+// ==================== STAFF API ====================
+
+export const staffApi = {
+  // Queue (backend filters by counter for staff role)
+  getQueues:      (params) => api.get('/admin/queue', { params }),
+  getStats:       ()       => api.get('/admin/queue/stats'),
+  callQueue:      (queueId, counterNumber) => api.post('/admin/queue/call', { queue_id: queueId, counter_number: counterNumber }),
+  doneQueue:      (id)     => api.post(`/admin/queue/${id}/done`),
+  skipQueue:      (id)     => api.post(`/admin/queue/${id}/skip`),
+  recallQueue:    (id)     => api.post(`/admin/queue/${id}/recall`),
+
+  // Waiting list (all queues, read-only)
+  getAllQueues:    (params) => api.get('/admin/queue', { params }),
+  getServices:    ()       => api.get('/admin/services'),
+
+  // Stats & report
+  getDailyStats:  ()       => api.get('/staff/stats/daily'),
+  exportReport:   (params) => api.get('/staff/report/export', { params, responseType: 'blob' }),
+
+  // History (for report preview)
+  getHistory:     (params) => api.get('/admin/queue/history', { params }),
+
+  // Profile
+  changePassword: (data)   => api.put('/staff/profile/password', data),
 };
 
 export default api;

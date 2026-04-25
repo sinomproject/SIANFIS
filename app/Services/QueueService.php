@@ -205,22 +205,18 @@ class QueueService
     }
 
     /**
-     * Get today's statistics.
+     * Get today's statistics, optionally filtered by counter_id.
      */
-    public function getTodayStats(): array
+    public function getTodayStats(?int $counterId = null): array
     {
-        $total = Queue::today()->count();
-        $waiting = Queue::today()->waiting()->count();
-        $called = Queue::today()->called()->count();
-        $done = Queue::today()->done()->count();
-        $skipped = Queue::today()->where('status', 'skipped')->count();
+        $base = fn() => $counterId ? Queue::today()->where('counter_id', $counterId) : Queue::today();
 
         return [
-            'total' => $total,
-            'waiting' => $waiting,
-            'called' => $called,
-            'done' => $done,
-            'skipped' => $skipped,
+            'total'   => $base()->count(),
+            'waiting' => $base()->waiting()->count(),
+            'called'  => $base()->called()->count(),
+            'done'    => $base()->done()->count(),
+            'skipped' => $base()->where('status', 'skipped')->count(),
         ];
     }
 }

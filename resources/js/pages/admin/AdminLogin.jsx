@@ -36,7 +36,8 @@ const AdminLogin = () => {
       if (response.data.success) {
         localStorage.setItem('admin_token', response.data.data.token);
         localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
-        navigate('/admin/dashboard');
+        const role = response.data.data.user.role;
+        navigate(role === 'staff' ? '/staff/dashboard' : '/admin/dashboard');
       }
     } catch (err) {
       console.error('Login error:', err);

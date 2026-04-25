@@ -60,3 +60,36 @@ Route::get('/admin/app-settings', function () {
 Route::get('/admin/audio-settings', function () {
     return view('app');
 });
+
+Route::get('/admin/display-background', function () {
+    return view('app');
+});
+
+Route::get('/admin/display-control', function () {
+    return view('app');
+});
+
+Route::get('/admin/users', function () {
+    return view('app');
+});
+
+// Staff Routes
+Route::get('/staff/dashboard', function () {
+    return view('app');
+});
+
+Route::get('/staff/queue', function () {
+    return view('app');
+});
+
+Route::get('/staff/waiting-list', function () {
+    return view('app');
+});
+
+Route::get('/staff/report', function () {
+    return view('app');
+});
+
+Route::get('/staff/profile', function () {
+    return view('app');
+});

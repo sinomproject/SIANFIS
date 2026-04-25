@@ -23,8 +23,14 @@ class QueueController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $user  = $request->user();
         $query = Queue::with(['visitor', 'service'])
             ->today();
+
+        // Staff sees only their counter's queue
+        if ($user->isStaff() && $user->counter_id) {
+            $query->where('counter_id', $user->counter_id);
+        }
 
         // Filter by status
         if ($request->has('status') && $request->status) {
@@ -81,6 +87,15 @@ class QueueController extends Controller
             'queue_id' => 'required|exists:queues,id',
             'counter_number' => 'required|integer|min:1',
         ]);
+
+        // Staff can only call their own counter's queues
+        $user = $request->user();
+        if ($user->isStaff() && $user->counter_id) {
+            $q = Queue::find($request->queue_id);
+            if ($q && $q->counter_id && $q->counter_id !== $user->counter_id) {
+                return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
+            }
+        }
 
         try {
             $queue = $this->queueService->callQueue(
@@ -159,8 +174,21 @@ class QueueController extends Controller
     /**
      * Mark queue as done.
      */
-    public function done(int $id): JsonResponse
+    private function assertCounterAccess(Request $request, int $queueId): ?JsonResponse
     {
+        $user = $request->user();
+        if ($user->isStaff() && $user->counter_id) {
+            $q = Queue::find($queueId);
+            if ($q && $q->counter_id && $q->counter_id !== $user->counter_id) {
+                return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
+            }
+        }
+        return null;
+    }
+
+    public function done(Request $request, int $id): JsonResponse
+    {
+        if ($err = $this->assertCounterAccess($request, $id)) return $err;
         try {
             $queue = $this->queueService->doneQueue($id);
 
@@ -184,8 +212,9 @@ class QueueController extends Controller
     /**
      * Skip a queue.
      */
-    public function skip(int $id): JsonResponse
+    public function skip(Request $request, int $id): JsonResponse
     {
+        if ($err = $this->assertCounterAccess($request, $id)) return $err;
         try {
             $queue = $this->queueService->skipQueue($id);
 
@@ -209,8 +238,9 @@ class QueueController extends Controller
     /**
      * Recall a queue.
      */
-    public function recall(int $id): JsonResponse
+    public function recall(Request $request, int $id): JsonResponse
     {
+        if ($err = $this->assertCounterAccess($request, $id)) return $err;
         try {
             $queue = $this->queueService->recallQueue($id);
 
@@ -234,9 +264,10 @@ class QueueController extends Controller
     /**
      * Get dashboard stats.
      */
-    public function stats(): JsonResponse
+    public function stats(Request $request): JsonResponse
     {
-        $stats = $this->queueService->getTodayStats();
+        $user  = $request->user();
+        $stats = $this->queueService->getTodayStats($user->isStaff() ? $user->counter_id : null);
         $services = Service::active()->get();
 
         $serviceStats = $services->map(function ($service) {
