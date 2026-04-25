@@ -143,6 +143,38 @@
   }
 }
 
+/* ── Force light mode globally (no dark class override) ─────────────────── */
+html {
+  color-scheme: light !important;
+}
+.dark {
+  --background: 0 0% 98% !important;
+  --foreground: 222.2 84% 4.9% !important;
+  --card: 0 0% 100% !important;
+  --card-foreground: 222.2 84% 4.9% !important;
+  --popover: 0 0% 100% !important;
+  --popover-foreground: 222.2 84% 4.9% !important;
+  --primary: 243 75% 59% !important;
+  --primary-foreground: 210 40% 98% !important;
+  --secondary: 210 40% 96.1% !important;
+  --secondary-foreground: 222.2 47.4% 11.2% !important;
+  --muted: 210 40% 96.1% !important;
+  --muted-foreground: 215.4 16.3% 46.9% !important;
+  --accent: 172 66% 50% !important;
+  --accent-foreground: 222.2 47.4% 11.2% !important;
+  --destructive: 0 84.2% 60.2% !important;
+  --destructive-foreground: 210 40% 98% !important;
+  --border: 214.3 31.8% 91.4% !important;
+  --input: 214.3 31.8% 91.4% !important;
+  --ring: 243 75% 59% !important;
+  --surface: 0 0% 100% !important;
+  --surface-variant: 210 40% 96.1% !important;
+  --outline: 214.3 31.8% 91.4% !important;
+  --on-surface: 222.2 84% 4.9% !important;
+  --on-primary: 210 40% 98% !important;
+  --on-secondary: 222.2 47.4% 11.2% !important;
+}
+
 /* ============================================
    MATERIAL DESIGN COMPONENTS
    ============================================ */

@@ -341,7 +341,7 @@ const PublicDisplay = () => {
           <div style={{ width: 2, height: 40, background: BLUE, borderRadius: 2, margin: '0 8px' }} />
           <div>
             <div style={{ fontSize: 22, fontWeight: 900, color: BLUE, letterSpacing: 1 }}>
-              FISIPOL UMA
+              SIANFIS - FISIPOL UMA
             </div>
             <div style={{ fontSize: 13, color: SUBTEXT, marginTop: 1 }}>
               Sistem Informasi Antrian Digital
@@ -349,16 +349,16 @@ const PublicDisplay = () => {
           </div>
         </div>
 
-        {/* Right: clock */}
+        {/* Right: clock (WIB) */}
         <div style={{ textAlign: 'right' }}>
           <div style={{
             fontSize: 38, fontWeight: 900, fontFamily: 'monospace',
             letterSpacing: 2, lineHeight: 1, color: TEXT,
           }}>
-            {currentTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {currentTime.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
           <div style={{ fontSize: 14, color: SUBTEXT, marginTop: 3 }}>
-            {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {currentTime.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
           </div>
         </div>
       </div>
@@ -377,9 +377,10 @@ const PublicDisplay = () => {
         <div style={{
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          padding: '24px 40px',
+          padding: '16px 24px',
           borderRight: `1px solid ${CARD_BOR}`,
           gap: 0,
+          overflow: 'hidden',
         }}>
 
           {/* Section label */}
@@ -435,17 +436,18 @@ const PublicDisplay = () => {
 
               {/* Mini stats row */}
               <div style={{
-                display: 'flex', gap: 24, marginTop: 28,
-                padding: '12px 28px',
+                display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+                gap: 16, marginTop: 20,
+                padding: '10px 20px',
                 background: CARD_BG,
                 borderRadius: 10,
                 border: `1px solid ${CARD_BOR}`,
                 boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
               }}>
                 <StatBit label="Menunggu" value={stats?.waiting ?? 0} color="#d97706" />
-                <div style={{ width: 1, background: CARD_BOR }} />
+                <div style={{ width: 1, height: 32, background: CARD_BOR }} />
                 <StatBit label="Selesai"  value={stats?.done    ?? 0} color="#16a34a" />
-                <div style={{ width: 1, background: CARD_BOR }} />
+                <div style={{ width: 1, height: 32, background: CARD_BOR }} />
                 <StatBit label="Total"    value={stats?.total   ?? 0} color={BLUE} />
               </div>
             </>
@@ -463,17 +465,18 @@ const PublicDisplay = () => {
               </div>
               {stats && (
                 <div style={{
-                  display: 'flex', gap: 24, marginTop: 28,
-                  padding: '12px 28px',
+                  display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+                  gap: 16, marginTop: 20,
+                  padding: '10px 20px',
                   background: CARD_BG,
                   borderRadius: 10,
                   border: `1px solid ${CARD_BOR}`,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                 }}>
                   <StatBit label="Menunggu" value={stats.waiting} color="#d97706" />
-                  <div style={{ width: 1, background: CARD_BOR }} />
+                  <div style={{ width: 1, height: 32, background: CARD_BOR }} />
                   <StatBit label="Selesai"  value={stats.done}    color="#16a34a" />
-                  <div style={{ width: 1, background: CARD_BOR }} />
+                  <div style={{ width: 1, height: 32, background: CARD_BOR }} />
                   <StatBit label="Total"    value={stats.total}   color={BLUE} />
                 </div>
               )}
@@ -572,9 +575,10 @@ const PublicDisplay = () => {
           fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: 500,
         }}>
           &nbsp;&nbsp;&nbsp;
+          • Jam Pelayanan : Senin s.d Jumat : 07.30 s.d 15.30 WIB (Istirahat 12.00 s.d 13.30 WIB). Sabtu : 08.00 s.d 12.00 WIB &nbsp;&nbsp;
           • Harap menunggu dengan tertib &nbsp;&nbsp;
-          • Nomor antrian akan dipanggil secara berurutan &nbsp;&nbsp;
-          • Pastikan Anda berada di area tunggu &nbsp;&nbsp;
+          • Nomor antrian akan dipanggil secara berurutan berdasarkan loket yang dituju&nbsp;&nbsp;
+          • Pastikan Anda berada di area tunggu ruangan Administrasi FISIPOL UMA&nbsp;&nbsp;
           • Terima kasih atas kesabaran Anda &nbsp;&nbsp;
           • SIANFIS — Sistem Informasi Antrian Fisipol &nbsp;&nbsp;
         </div>
@@ -623,9 +627,9 @@ const PublicDisplay = () => {
 // ── Small helper components ────────────────────────────────────────────────────
 
 const StatBit = ({ label, value, color }) => (
-  <div style={{ textAlign: 'center', minWidth: 52 }}>
-    <div style={{ fontSize: 32, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
-    <div style={{ fontSize: 13, color: SUBTEXT, marginTop: 3 }}>{label}</div>
+  <div style={{ textAlign: 'center', minWidth: 44 }}>
+    <div style={{ fontSize: 28, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+    <div style={{ fontSize: 12, color: SUBTEXT, marginTop: 2 }}>{label}</div>
   </div>
 );
 
@@ -652,10 +656,10 @@ const StatsPanel = ({ stats }) => (
 const BigStatCard = ({ label, value, color, bg, border }) => (
   <div style={{
     background: bg, border: `1px solid ${border}`,
-    borderRadius: 12, padding: '20px 16px', textAlign: 'center',
+    borderRadius: 12, padding: '14px 12px', textAlign: 'center',
   }}>
-    <div style={{ fontSize: 56, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
-    <div style={{ fontSize: 16, color: SUBTEXT, marginTop: 8 }}>{label}</div>
+    <div style={{ fontSize: 40, fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+    <div style={{ fontSize: 14, color: SUBTEXT, marginTop: 6 }}>{label}</div>
   </div>
 );
 
