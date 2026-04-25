@@ -97,6 +97,15 @@ const PublicDisplay = () => {
     }
   }, []);
 
+  // Suppress console output on the display screen
+  useEffect(() => {
+    if (window.location.pathname.includes('/display')) {
+      console.log   = () => {};
+      console.warn  = () => {};
+      console.error = () => {};
+    }
+  }, []);
+
   // Force TV fullscreen layout — prevent any scroll
   useEffect(() => {
     const prev = {
@@ -197,12 +206,12 @@ const PublicDisplay = () => {
 
   const playlistId      = extractPlaylistId(youtubePlaylistUrl);
   const youtubeEmbedUrl = playlistId
-    ? `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1`
+    ? `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&mute=1&loop=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1&playsinline=1`
     : null;
 
   const externalVideoId       = extractVideoId(externalVideoUrl);
   const externalVideoEmbedUrl = externalVideoId
-    ? `https://www.youtube.com/embed/${externalVideoId}?autoplay=1&mute=${videoSound ? '0' : '1'}&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1&playlist=${externalVideoId}`
+    ? `https://www.youtube.com/embed/${externalVideoId}?autoplay=1&mute=${videoSound ? '0' : '1'}&loop=1&controls=0&modestbranding=1&rel=0&iv_load_policy=3&fs=0&disablekb=1&playsinline=1&playlist=${externalVideoId}`
     : null;
 
   // ── Loading state ─────────────────────────────────────────────────────────────
@@ -487,31 +496,38 @@ const PublicDisplay = () => {
         {/* RIGHT PANEL — YouTube or stats ────────────────────────────────── */}
         <div style={{ position: 'relative', overflow: 'hidden' }}>
           {youtubeEmbedUrl ? (
-            <>
-              {/* Rounded wrapper with inset margin */}
+            /* Rounded wrapper with inset margin */
+            <div style={{
+              position: 'absolute',
+              top: 12, left: 12, right: 12, bottom: 12,
+              borderRadius: 16,
+              overflow: 'hidden',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+            }}>
+              {/* 177.78% width trick — video covers container at any aspect ratio */}
+              <iframe
+                src={youtubeEmbedUrl}
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  width: '177.78%',
+                  height: '100%',
+                  transform: 'translate(-50%, -50%)',
+                  border: 0,
+                  display: 'block',
+                }}
+                allow="autoplay; encrypted-media"
+                title="YouTube Playlist"
+              />
+              {/* Interaction blocker — prevents click, pause, fullscreen */}
               <div style={{
                 position: 'absolute',
-                top: 12, left: 12, right: 12, bottom: 12,
-                borderRadius: 16,
-                overflow: 'hidden',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
-              }}>
-                <iframe
-                  src={youtubeEmbedUrl}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    display: 'block',
-                    pointerEvents: 'none',
-                  }}
-                  allow="autoplay"
-                  title="YouTube Playlist"
-                />
-              </div>
-            </>
+                inset: 0,
+                zIndex: 10,
+                cursor: 'none',
+              }} />
+            </div>
           ) : (
             <StatsPanel stats={stats} />
           )}
