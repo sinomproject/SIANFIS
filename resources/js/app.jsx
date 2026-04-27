@@ -8,6 +8,7 @@ import PublicForm from './pages/PublicForm';
 import TicketDisplay from './pages/TicketDisplay';
 import PublicDisplay from './pages/PublicDisplay';
 import AdminLogin from './pages/admin/AdminLogin';
+import AdminSinomLogin from './pages/admin/AdminSinomLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import QueueManagement from './pages/admin/QueueManagement';
 import QueueHistory from './pages/admin/QueueHistory';
@@ -38,6 +39,7 @@ function App() {
         
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin-sinom" element={<AdminSinomLogin />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/queue" element={<QueueManagement />} />
         <Route path="/admin/history" element={<QueueHistory />} />

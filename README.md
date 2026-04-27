@@ -45,8 +45,8 @@ Sistem Antrian Terintegrasi untuk pengelolaan pengunjung dan antrian secara digi
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/Aztian054/Smart-Queue-System-Buku-Tamu-Digital-.git
-cd Smart-Queue-System-Buku-Tamu-Digital-
+git clone https://github.com/your-org/SIANFIS.git
+cd SIANFIS
 ```
 
 ### 2. Install Dependencies
@@ -290,5 +290,6 @@ MIT License
 
 ## 👨‍💻 Author
 
-SIANFIS - Sistem Informasi Antrian Fisipol - Buku Tamu Digital  
-Developed for BPPMHKP (Balai Pengujian dan Sertifikasi Mutu Hasil Perikanan) - 2026
+SIANFIS - Sistem Informasi Antrian Fisipol
+Dikembangkan untuk FISIPOL UMA (Fakultas Ilmu Sosial dan Ilmu Politik, Universitas Medan Area) - 2026
+Powered by Sinom

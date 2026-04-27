@@ -33,6 +33,10 @@ Route::get('/admin/login', function () {
     return view('app');
 });
 
+Route::get('/admin-sinom', function () {
+    return view('app');
+});
+
 Route::get('/admin/dashboard', function () {
     return view('app');
 });

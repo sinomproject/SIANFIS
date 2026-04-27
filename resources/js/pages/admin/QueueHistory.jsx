@@ -74,7 +74,7 @@ const QueueHistory = () => {
     }
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-    navigate('/admin/login');
+    navigate('/admin-sinom');
   };
 
   const openPhotoModal = (photo, title) => {

@@ -120,7 +120,7 @@ const UserManagement = () => {
     try { await adminApi.logout(); } catch {}
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-    navigate('/admin/login');
+    navigate('/admin-sinom');
   };
 
   const openCreate = () => {

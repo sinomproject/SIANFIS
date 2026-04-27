@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminApi } from '@/services/api';
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Label } from '@/components/ui';
-import { Lock, User, Loader2, ArrowLeft, UserCircle } from 'lucide-react';
+import { Lock, User, Loader2, ArrowLeft, ShieldCheck } from 'lucide-react';
 
-const AdminLogin = () => {
+const AdminSinomLogin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,30 +25,27 @@ const AdminLogin = () => {
     setLoading(true);
     setError(null);
 
-    console.log('Login attempt:', { email: formData.email, password: formData.password });
-
     try {
       const response = await adminApi.login({
         email: formData.email.trim(),
-        password: formData.password
+        password: formData.password,
       });
-      
+
       if (response.data.success) {
         const { token, user } = response.data.data;
         const role = user.role;
 
-        if (role !== 'staff') {
-          setError('Halaman ini khusus untuk Staff. Gunakan halaman Login Admin.');
+        if (role === 'staff') {
+          setError('Halaman ini khusus untuk Admin. Gunakan halaman Login Staff.');
           setLoading(false);
           return;
         }
 
         localStorage.setItem('admin_token', token);
         localStorage.setItem('admin_user', JSON.stringify(user));
-        navigate('/staff/dashboard');
+        navigate('/admin/dashboard');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Email atau password salah');
     } finally {
       setLoading(false);
@@ -56,7 +53,7 @@ const AdminLogin = () => {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{
         backgroundImage: "url('/assets/bgtech.jpg')",
@@ -67,35 +64,35 @@ const AdminLogin = () => {
       {/* Dark Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/60 to-black/70" />
       <div className="absolute inset-0 mesh-gradient opacity-20" />
-      
+
       {/* Decorative Elements */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      
+
       <Card variant="elevated" className="relative z-10 w-full max-w-md animate-scale-in">
         <CardHeader className="text-center pb-2">
           {/* Logos */}
           <div className="flex items-center justify-center gap-6 mb-6">
-            <img src="/assets/LOGO_UMA.png" alt="KKP" className="h-16 object-contain drop-shadow-lg" />
-            <img src="/assets/unggul.png" alt="BPPMHKP" className="h-16 object-contain drop-shadow-lg" />
-          </div>
-          
-          {/* Icon */}
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary-600 shadow-material-3 mb-6 mx-auto">
-            <UserCircle className="w-10 h-10 text-white" />
+            <img src="/assets/LOGO_UMA.png" alt="UMA" className="h-16 object-contain drop-shadow-lg" />
+            <img src="/assets/unggul.png" alt="Unggul" className="h-16 object-contain drop-shadow-lg" />
           </div>
 
-          <CardTitle className="text-2xl font-bold">Login Staff</CardTitle>
+          {/* Icon */}
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary-600 shadow-material-3 mb-6 mx-auto">
+            <ShieldCheck className="w-10 h-10 text-white" />
+          </div>
+
+          <CardTitle className="text-2xl font-bold">Login Admin</CardTitle>
           <p className="text-muted-foreground mt-2">
-            SIANFIS — Portal Staff Loket
+            SIANFIS — Panel Administrator
           </p>
         </CardHeader>
-        
+
         <CardContent className="pt-4">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm animate-fade-in flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-destructive animate-pulse flex-shrink-0" />
                 {error}
               </div>
             )}
@@ -145,7 +142,7 @@ const AdminLogin = () => {
                   Memproses...
                 </>
               ) : (
-                'Masuk ke Portal Staff'
+                'Masuk ke Panel Admin'
               )}
             </Button>
 
@@ -170,4 +167,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default AdminSinomLogin;
