@@ -9,67 +9,40 @@
  * Files live at: /storage/audio/
  */
 
-const BASE = "/storage/audio/";
-
-// ── Global audio queue (prevents concurrent playback loss) ───────────────────
+// ── Global audio queue (serial playback, no overlap) ─────────────────────────
 let audioQueue = [];
 let isPlaying  = false;
 
-// ── Play a single audio file, resolving when it ends (or on error) ────────────
+// ── Queue processor (event-based, not async/await) ───────────────────────────
 
-function playFile(src) {
-  return new Promise((resolve) => {
-    const audio = new Audio(src);
-    audio.volume  = 1.0;
-    audio.onended = resolve;
-    audio.onerror = () => {
-      console.warn("[Speech] File not found, skipping:", src);
-      resolve();
-    };
-    audio.play().catch((err) => {
-      console.warn("[Speech] play() rejected:", src, err);
-      resolve();
-    });
-  });
-}
-
-// ── Play one announcement: bell → queue audio ─────────────────────────────────
-
-async function playAudioSequence(item) {
-  // "IP-042" → "ip-042.mp3"
-  const filename = item.kode.toLowerCase() + ".mp3";
-
-  await playFile(`${BASE}bell.mp3`);
-  await playFile(`${BASE}${filename}`);
-
-  // Anti-collision gap between consecutive announcements
-  await new Promise((r) => setTimeout(r, 300));
-}
-
-// ── Queue processor — called after every enqueue ─────────────────────────────
-
-async function processQueue() {
+function processQueue() {
   if (isPlaying || audioQueue.length === 0) return;
 
   isPlaying = true;
+  const queueNumber = audioQueue.shift();
 
-  while (audioQueue.length) {
-    const item = audioQueue.shift();
-    try {
-      await playAudioSequence(item);
-    } catch (e) {
-      console.error("[Audio] Error:", e);
-    }
-  }
+  const bell = new Audio('/storage/audio/bell.mp3');
+  const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  isPlaying = false;
-}
+  bell.onended = () => {
+    main.play();
+  };
 
-// ── Enqueue a single announcement ────────────────────────────────────────────
+  main.onended = () => {
+    setTimeout(() => {
+      isPlaying = false;
+      processQueue();
+    }, 300);
+  };
 
-function enqueueAudio(data) {
-  audioQueue.push(data);
-  processQueue();
+  main.onerror = () => {
+    isPlaying = false;
+    processQueue();
+  };
+
+  bell.play().catch(() => {
+    main.play();
+  });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -77,19 +50,19 @@ function enqueueAudio(data) {
 /**
  * Queue a queue-call announcement.
  * Safe to call from multiple counters simultaneously — all are queued and
- * played sequentially without overlap or loss.
+ * played serially without overlap or loss.
  *
- * @param {string} kode  Queue number as formatted by the backend,
- *                       e.g. "IP-042", "IK1-007", "KTU-001"
+ * @param {string} queueNumber  e.g. "IP-042", "IK1-007", "KTU-001"
  */
-export function playAntrian(kode) {
+export function playAntrian(queueNumber) {
   if (!window.AUDIO_UNLOCKED) {
     console.warn("[Speech] Audio not unlocked yet.");
     return;
   }
 
-  console.log("[Speech] Enqueue:", kode);
-  enqueueAudio({ kode });
+  console.log("[Speech] Enqueue:", queueNumber);
+  audioQueue.push(queueNumber);
+  processQueue();
 }
 
 // ── Audio unlock ──────────────────────────────────────────────────────────────
