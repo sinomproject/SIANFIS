@@ -177,6 +177,11 @@ const PublicDisplay = () => {
 
       setDisplayData(data);
     } catch (err) {
+      if (err.response?.status === 429) {
+        console.warn('[Display] API rate limited, retrying next interval...');
+        setLoading(false);
+        return;
+      }
       setError('Gagal mengambil data dari server. Pastikan server berjalan.');
     } finally {
       setLoading(false);
@@ -191,7 +196,7 @@ const PublicDisplay = () => {
     pollingIntervalRef.current = setInterval(() => {
       fetchDisplaySettings();
       fetchDisplayData();
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(pollingIntervalRef.current);
   }, []);

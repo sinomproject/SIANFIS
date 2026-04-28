@@ -44,14 +44,12 @@ Route::post('/queue/register', [VisitorController::class, 'register']);
 Route::get('/ticket/{id}', [TicketController::class, 'show']);
 Route::get('/ticket/code/{code}', [TicketController::class, 'getByCode']);
 
-// Display (for polling)
-Route::get('/display/current', [DisplayController::class, 'current']);
-
-// Display background (public — used by ticket form on page load)
-Route::get('/display-background', [DisplaySettingController::class, 'show']);
-
-// Display settings (public — for display page)
-Route::get('/display-settings', [DisplaySettingController::class, 'getSettings']);
+// Display (for polling) — high throttle limit to prevent 429 on TV screens
+Route::middleware('throttle:display')->group(function () {
+    Route::get('/display/current', [DisplayController::class, 'current']);
+    Route::get('/display-background', [DisplaySettingController::class, 'show']);
+    Route::get('/display-settings', [DisplaySettingController::class, 'getSettings']);
+});
 
 // Video (DEPRECATED - replaced with YouTube Playlist)
 // Route::get('/video', [VideoController::class, 'show']);
