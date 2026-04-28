@@ -38,7 +38,7 @@ const PublicDisplay = () => {
   const [currentTime,        setCurrentTime]        = useState(new Date());
   const [lastCalledByCode,   setLastCalledByCode]   = useState({});
 
-  const lastQueueId        = useRef(null);
+  const lastQueueId        = useRef(new Set());
   const pollingIntervalRef = useRef(null);
   const speechInitialized  = useRef(false);
   const unlockBtnRef       = useRef(null);
@@ -152,15 +152,25 @@ const PublicDisplay = () => {
       const res  = await publicApi.getDisplayData();
       const data = res.data.data;
 
-      if (data.current?.queue_id && data.current.queue_id !== lastQueueId.current) {
-        lastQueueId.current = data.current.queue_id;
-        playAntrian(data.current.queue_number);
-      }
+      // Process all recent calls — play any not yet seen
+      if (Array.isArray(data.current)) {
+        // Iterate oldest-first so audio queues in chronological order
+        [...data.current].reverse().forEach(queue => {
+          const uniqueKey = `${queue.queue_id}-${queue.counter_number}`;
+          console.log('[QUEUE EVENT]', queue.queue_id, queue.counter_number);
+          if (!lastQueueId.current.has(uniqueKey)) {
+            lastQueueId.current.add(uniqueKey);
+            playAntrian(queue.queue_number);
+          }
+        });
 
-      // Track last-called queue number per counter code
-      if (data.current?.queue_number) {
-        const code = data.current.queue_number.split('-')[0];
-        setLastCalledByCode(prev => ({ ...prev, [code]: data.current.queue_number }));
+        // Track last-called per counter code for bottom cards
+        data.current.forEach(queue => {
+          if (queue.queue_number) {
+            const code = queue.queue_number.split('-')[0];
+            setLastCalledByCode(prev => ({ ...prev, [code]: queue.queue_number }));
+          }
+        });
       }
 
       setDisplayData(data);
@@ -250,7 +260,9 @@ const PublicDisplay = () => {
     );
   }
 
-  const { current, stats } = displayData || {};
+  const { current: currentList, stats } = displayData || {};
+  // Display panel uses the most-recent call (index 0 = latest)
+  const current = currentList?.[0] ?? null;
 
   // ── VIDEO MODE ────────────────────────────────────────────────────────────────
   if (displayMode === 'video' && externalVideoEmbedUrl) {

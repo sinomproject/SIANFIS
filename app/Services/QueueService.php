@@ -165,7 +165,7 @@ class QueueService
     }
 
     /**
-     * Get current called queue for display.
+     * Get current called queue for display (single — kept for backward compat).
      */
     public function getCurrentCalled(): ?Queue
     {
@@ -174,6 +174,20 @@ class QueueService
             ->called()
             ->latest('called_at')
             ->first();
+    }
+
+    /**
+     * Get recent called queues for multi-counter display.
+     * Returns up to $limit most recently called queues across all counters.
+     */
+    public function getRecentCalled(int $limit = 5): \Illuminate\Database\Eloquent\Collection
+    {
+        return Queue::with(['visitor', 'service', 'counter'])
+            ->today()
+            ->called()
+            ->latest('called_at')
+            ->take($limit)
+            ->get();
     }
 
     /**

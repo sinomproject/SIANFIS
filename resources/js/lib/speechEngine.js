@@ -11,9 +11,9 @@
 
 const BASE = "/storage/audio/";
 
-// ── Pending calls while audio is already playing ──────────────────────────────
-let callQueue = [];
-let playing   = false;
+// ── Global audio queue (prevents concurrent playback loss) ───────────────────
+let audioQueue = [];
+let isPlaying  = false;
 
 // ── Play a single audio file, resolving when it ends (or on error) ────────────
 
@@ -33,39 +33,51 @@ function playFile(src) {
   });
 }
 
-// ── Play one announcement: ding → queue audio ─────────────────────────────────
+// ── Play one announcement: bell → queue audio ─────────────────────────────────
 
-async function playCall(kode) {
+async function playAudioSequence(item) {
   // "IP-042" → "ip-042.mp3"
-  const filename = kode.toLowerCase() + ".mp3";
+  const filename = item.kode.toLowerCase() + ".mp3";
 
   await playFile(`${BASE}bell.mp3`);
   await playFile(`${BASE}${filename}`);
+
+  // Anti-collision gap between consecutive announcements
+  await new Promise((r) => setTimeout(r, 300));
 }
 
-// ── Queue processor ───────────────────────────────────────────────────────────
+// ── Queue processor — called after every enqueue ─────────────────────────────
 
 async function processQueue() {
-  if (playing || !callQueue.length) return;
+  if (isPlaying || audioQueue.length === 0) return;
 
-  playing = true;
+  isPlaying = true;
 
-  while (callQueue.length) {
-    const { kode } = callQueue.shift();
-    await playCall(kode);
-
-    if (callQueue.length) {
-      await new Promise((r) => setTimeout(r, 300));
+  while (audioQueue.length) {
+    const item = audioQueue.shift();
+    try {
+      await playAudioSequence(item);
+    } catch (e) {
+      console.error("[Audio] Error:", e);
     }
   }
 
-  playing = false;
+  isPlaying = false;
+}
+
+// ── Enqueue a single announcement ────────────────────────────────────────────
+
+function enqueueAudio(data) {
+  audioQueue.push(data);
+  processQueue();
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Queue a queue-call announcement.
+ * Safe to call from multiple counters simultaneously — all are queued and
+ * played sequentially without overlap or loss.
  *
  * @param {string} kode  Queue number as formatted by the backend,
  *                       e.g. "IP-042", "IK1-007", "KTU-001"
@@ -77,8 +89,7 @@ export function playAntrian(kode) {
   }
 
   console.log("[Speech] Enqueue:", kode);
-  callQueue.push({ kode });
-  processQueue();
+  enqueueAudio({ kode });
 }
 
 // ── Audio unlock ──────────────────────────────────────────────────────────────

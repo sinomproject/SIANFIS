@@ -20,23 +20,23 @@ class DisplayController extends Controller
      */
     public function current(): JsonResponse
     {
-        $currentCalled = $this->queueService->getCurrentCalled();
+        $recentCalled = $this->queueService->getRecentCalled(5);
         $nextWaiting = $this->queueService->getNextWaiting(5);
         $stats = $this->queueService->getTodayStats();
 
         return response()->json([
             'success' => true,
             'data' => [
-                'current' => $currentCalled ? [
-                    'queue_id' => $currentCalled->id,
-                    'queue_number' => $currentCalled->formatted_number,
-                    'counter_number' => $currentCalled->counter_number,
-                    'counter_name' => $currentCalled->counter?->name,
-                    'service_name' => $currentCalled->service->name,
-                    'visitor_name' => $currentCalled->visitor->name,
-                    'called_at' => $currentCalled->called_at?->format('H:i'),
-                    'called_at_timestamp' => $currentCalled->called_at?->timestamp,
-                ] : null,
+                'current' => $recentCalled->map(fn($q) => [
+                    'queue_id'           => $q->id,
+                    'queue_number'       => $q->formatted_number,
+                    'counter_number'     => $q->counter_number,
+                    'counter_name'       => $q->counter?->name,
+                    'service_name'       => $q->service->name,
+                    'visitor_name'       => $q->visitor->name,
+                    'called_at'          => $q->called_at?->format('H:i'),
+                    'called_at_timestamp'=> $q->called_at?->timestamp,
+                ])->values()->all(),
                 'next_waiting' => array_map(function ($queue) {
                     return [
                         'queue_id' => $queue['id'],
