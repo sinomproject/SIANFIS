@@ -13,53 +13,36 @@
 let audioQueue = [];
 let isPlaying  = false;
 
-// ── Queue processor (event-based, not async/await) ───────────────────────────
+// ── Queue processor (timeout-based, stable on TV browsers) ───────────────────
 
 function processQueue() {
   if (isPlaying || audioQueue.length === 0) return;
 
   isPlaying = true;
-  const raw = audioQueue.shift();
-  const queueNumber = raw.split('-').slice(0, 2).join('-');
+  const queueNumber = audioQueue.shift();
 
   const bell = new Audio('/storage/audio/bell.mp3');
   const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  let started = false;
+  // force preload (critical for TV / slow browsers)
+  bell.load();
+  main.load();
 
-  const playMain = () => {
-    if (started) return;
-    started = true;
+  // play bell immediately
+  bell.play().catch(() => {});
 
+  // play main after fixed delay — no onended dependency
+  setTimeout(() => {
     main.play().catch(() => {
-      isPlaying = false;
-      processQueue();
+      console.warn('[Audio] main failed:', queueNumber);
     });
-  };
+  }, 700);
 
-  // bell selesai → lanjut main
-  bell.onended = playMain;
-
-  // fallback kalau bell gagal / tidak trigger
-  setTimeout(playMain, 800);
-
-  // selesai main → lanjut queue berikutnya
-  main.onended = () => {
-    setTimeout(() => {
-      isPlaying = false;
-      processQueue();
-    }, 300);
-  };
-
-  main.onerror = () => {
+  // advance queue after total duration (bell + main)
+  setTimeout(() => {
     isPlaying = false;
     processQueue();
-  };
-
-  // mulai bell
-  bell.play().catch(() => {
-    playMain();
-  });
+  }, 2500);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -78,7 +61,7 @@ export function playAntrian(queueNumber) {
   }
 
   console.log("[Speech] Enqueue:", queueNumber);
-  audioQueue.push(queueNumber + '-' + Date.now());
+  audioQueue.push(queueNumber);
   processQueue();
 }
 

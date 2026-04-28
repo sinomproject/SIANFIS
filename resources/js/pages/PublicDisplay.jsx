@@ -39,6 +39,7 @@ const PublicDisplay = () => {
   const [lastCalledByCode,   setLastCalledByCode]   = useState({});
 
   const lastQueueId        = useRef(new Set());
+  const playedRef          = useRef(new Set());
   const pollingIntervalRef = useRef(null);
   const speechInitialized  = useRef(false);
   const unlockBtnRef       = useRef(null);
@@ -152,14 +153,24 @@ const PublicDisplay = () => {
       const res  = await publicApi.getDisplayData();
       const data = res.data.data;
 
-      // Process all recent calls — no dedup so recall always plays
+      // Process all recent calls — dedup by queue_id+called_at so recall triggers as new event
       if (Array.isArray(data.current)) {
         [...data.current].reverse().forEach(queue => {
-          if (!queue.queue_number) return;
+          if (!queue.queue_number || !queue.called_at) return;
 
-          console.log('[PLAY]', queue.queue_number, queue.counter_number);
+          const key = `${queue.queue_id}-${queue.called_at}`;
+
+          if (playedRef.current.has(key)) return;
+          playedRef.current.add(key);
+
+          console.log('[PLAY]', key);
           playAntrian(queue.queue_number);
         });
+
+        // Prevent unbounded Set growth
+        if (playedRef.current.size > 50) {
+          playedRef.current.clear();
+        }
 
         // Track last-called per counter code for bottom cards
         data.current.forEach(queue => {
