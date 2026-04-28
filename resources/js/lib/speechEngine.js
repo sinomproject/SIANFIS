@@ -24,10 +24,25 @@ function processQueue() {
   const bell = new Audio('/storage/audio/bell.mp3');
   const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  bell.onended = () => {
-    main.play();
+  let started = false;
+
+  const playMain = () => {
+    if (started) return;
+    started = true;
+
+    main.play().catch(() => {
+      isPlaying = false;
+      processQueue();
+    });
   };
 
+  // bell selesai → lanjut main
+  bell.onended = playMain;
+
+  // fallback kalau bell gagal / tidak trigger
+  setTimeout(playMain, 800);
+
+  // selesai main → lanjut queue berikutnya
   main.onended = () => {
     setTimeout(() => {
       isPlaying = false;
@@ -40,8 +55,9 @@ function processQueue() {
     processQueue();
   };
 
+  // mulai bell
   bell.play().catch(() => {
-    main.play();
+    playMain();
   });
 }
 
