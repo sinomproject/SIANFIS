@@ -156,10 +156,12 @@ const PublicDisplay = () => {
       if (Array.isArray(data.current)) {
         // Iterate oldest-first so audio queues in chronological order
         [...data.current].reverse().forEach(queue => {
+          if (!queue.queue_number) return;
           const uniqueKey = `${queue.queue_id}-${queue.counter_number}`;
           console.log('[QUEUE EVENT]', queue.queue_id, queue.counter_number);
           if (!lastQueueId.current.has(uniqueKey)) {
             lastQueueId.current.add(uniqueKey);
+            console.log('[PLAY]', queue.queue_number);
             playAntrian(queue.queue_number);
           }
         });
@@ -263,6 +265,8 @@ const PublicDisplay = () => {
   const { current: currentList, stats } = displayData || {};
   // Display panel uses the most-recent call (index 0 = latest)
   const current = currentList?.[0] ?? null;
+  const counterLabel = current?.counter_name ||
+    (current?.counter_number ? `Loket ${current.counter_number}` : 'Loket');
 
   // ── VIDEO MODE ────────────────────────────────────────────────────────────────
   if (displayMode === 'video' && externalVideoEmbedUrl) {
@@ -436,7 +440,7 @@ const PublicDisplay = () => {
                   SILAKAN MENUJU
                 </div>
                 <div style={{ fontSize: 42, fontWeight: 900, lineHeight: 1, color: '#fff' }}>
-                  {current.counter_name || `Loket ${current.counter_number}`}
+                  {counterLabel}
                 </div>
               </div>
 

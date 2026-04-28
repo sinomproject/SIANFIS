@@ -31,7 +31,7 @@ class DisplayController extends Controller
                     'queue_id'           => $q->id,
                     'queue_number'       => $q->formatted_number,
                     'counter_number'     => $q->counter_number,
-                    'counter_name'       => $q->counter?->name,
+                    'counter_name'       => $q->counter?->name ?? ('Loket ' . $q->counter_number),
                     'service_name'       => $q->service->name,
                     'visitor_name'       => $q->visitor->name,
                     'called_at'          => $q->called_at?->format('H:i'),
