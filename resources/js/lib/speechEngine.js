@@ -1,68 +1,60 @@
 /**
- * speechEngine.js — Per-queue MP3 audio engine for SIANFIS.
+ * speechEngine.js — Serial MP3 audio engine for SIANFIS.
  *
- * Playback flow for each queue call:
- *   1. Play ding.mp3
- *   2. Play {code.lower}-{number}.mp3
- *      e.g. "IP-042" → ding.mp3 → ip-042.mp3
- *
- * Files live at: /storage/audio/
+ * Playback flow per call:
+ *   1. bell.mp3
+ *   2. {queue_number}.mp3  (after 700ms delay)
+ *   3. Lock released after 2600ms → next item in queue
  */
 
-// ── Global audio queue (serial playback, no overlap) ─────────────────────────
 let audioQueue = [];
 let isPlaying  = false;
-
-// ── Queue processor (timeout-based, stable on TV browsers) ───────────────────
 
 function processQueue() {
   if (isPlaying || audioQueue.length === 0) return;
 
   isPlaying = true;
+
   const queueNumber = audioQueue.shift();
 
   const bell = new Audio('/storage/audio/bell.mp3');
   const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  // force preload (critical for TV / slow browsers)
   bell.load();
   main.load();
 
-  // play bell immediately
+  console.log('[AUDIO START]', queueNumber);
+
+  // play bell
   bell.play().catch(() => {});
 
-  // play main after fixed delay — no onended dependency
+  // play main after fixed delay
   setTimeout(() => {
     main.play().catch(() => {
-      console.warn('[Audio] main failed:', queueNumber);
+      console.warn('[Audio] main gagal:', queueNumber);
     });
   }, 700);
 
-  // advance queue after total duration (bell + main)
+  // release lock and advance queue
   setTimeout(() => {
+    console.log('[AUDIO END]', queueNumber);
     isPlaying = false;
     processQueue();
-  }, 2500);
+  }, 2600);
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
-/**
- * Queue a queue-call announcement.
- * Safe to call from multiple counters simultaneously — all are queued and
- * played serially without overlap or loss.
- *
- * @param {string} queueNumber  e.g. "IP-042", "IK1-007", "KTU-001"
- */
 export function playAntrian(queueNumber) {
-  if (!window.AUDIO_UNLOCKED) {
-    console.warn("[Speech] Audio not unlocked yet.");
-    return;
-  }
+  if (!queueNumber) return;
 
-  console.log("[Speech] Enqueue:", queueNumber);
+  // prevent duplicate burst (same number queued back-to-back)
+  if (audioQueue[audioQueue.length - 1] === queueNumber) return;
+
   audioQueue.push(queueNumber);
-  processQueue();
+  console.log('[QUEUE ADD]', queueNumber, 'LEN:', audioQueue.length);
+
+  if (!isPlaying) {
+    processQueue();
+  }
 }
 
 // ── Audio unlock ──────────────────────────────────────────────────────────────
