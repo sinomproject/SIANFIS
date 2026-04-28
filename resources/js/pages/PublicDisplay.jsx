@@ -152,18 +152,13 @@ const PublicDisplay = () => {
       const res  = await publicApi.getDisplayData();
       const data = res.data.data;
 
-      // Process all recent calls — play any not yet seen
+      // Process all recent calls — no dedup so recall always plays
       if (Array.isArray(data.current)) {
-        // Iterate oldest-first so audio queues in chronological order
         [...data.current].reverse().forEach(queue => {
           if (!queue.queue_number) return;
-          const uniqueKey = `${queue.queue_id}-${queue.counter_number}`;
-          console.log('[QUEUE EVENT]', queue.queue_id, queue.counter_number);
-          if (!lastQueueId.current.has(uniqueKey)) {
-            lastQueueId.current.add(uniqueKey);
-            console.log('[PLAY]', queue.queue_number);
-            playAntrian(queue.queue_number);
-          }
+
+          console.log('[PLAY]', queue.queue_number, queue.counter_number);
+          playAntrian(queue.queue_number);
         });
 
         // Track last-called per counter code for bottom cards

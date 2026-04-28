@@ -19,7 +19,8 @@ function processQueue() {
   if (isPlaying || audioQueue.length === 0) return;
 
   isPlaying = true;
-  const queueNumber = audioQueue.shift();
+  const raw = audioQueue.shift();
+  const queueNumber = raw.split('-').slice(0, 2).join('-');
 
   const bell = new Audio('/storage/audio/bell.mp3');
   const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
@@ -77,7 +78,7 @@ export function playAntrian(queueNumber) {
   }
 
   console.log("[Speech] Enqueue:", queueNumber);
-  audioQueue.push(queueNumber);
+  audioQueue.push(queueNumber + '-' + Date.now());
   processQueue();
 }
 
