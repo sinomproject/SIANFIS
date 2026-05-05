@@ -1,14 +1,5 @@
-/**
- * speechEngine.js — Serial MP3 audio engine for SIANFIS.
- *
- * Playback flow per call:
- *   1. bell.mp3
- *   2. {queue_number}.mp3  (after 700ms delay)
- *   3. Lock released after 2600ms → next item in queue
- */
-
 let audioQueue = [];
-let isPlaying  = false;
+let isPlaying = false;
 
 function processQueue() {
   if (isPlaying || audioQueue.length === 0) return;
@@ -23,41 +14,36 @@ function processQueue() {
   bell.load();
   main.load();
 
-  console.log('[AUDIO START]', queueNumber);
+  console.log('[PLAY]', queueNumber);
 
   // play bell
   bell.play().catch(() => {});
 
-  // play main after fixed delay
+  // play main setelah bell
   setTimeout(() => {
     main.play().catch(() => {
-      console.warn('[Audio] main gagal:', queueNumber);
+      console.warn('[Audio error]', queueNumber);
     });
   }, 700);
 
-  // release lock and advance queue
+  // delay antar antrian (ANTI TABRAKAN)
   setTimeout(() => {
-    console.log('[AUDIO END]', queueNumber);
     isPlaying = false;
     processQueue();
-  }, 2600);
+  }, 3000);
 }
 
 export function playAntrian(queueNumber) {
   if (!queueNumber) return;
 
-  // prevent duplicate burst (same number queued back-to-back)
-  if (audioQueue[audioQueue.length - 1] === queueNumber) return;
-
   audioQueue.push(queueNumber);
-  console.log('[QUEUE ADD]', queueNumber, 'LEN:', audioQueue.length);
+
+  console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
 
   if (!isPlaying) {
     processQueue();
   }
 }
-
-// ── Audio unlock ──────────────────────────────────────────────────────────────
 
 export async function unlockAudioSystem() {
   console.log("[Speech] Unlocking audio...");
@@ -70,7 +56,7 @@ export async function unlockAudioSystem() {
       "u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8A" +
       "AAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAA4T6y8vkAAAAAAAAAAAAAAAAAAAAAAP/7kGQAD/AAAGk" +
       "AAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" +
-      "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
+      "VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
     await silent.play().catch(() => {});
 
     window.AUDIO_UNLOCKED = true;
@@ -81,8 +67,6 @@ export async function unlockAudioSystem() {
     return false;
   }
 }
-
-// ── Init (no-op, kept for API compatibility) ──────────────────────────────────
 
 export async function initSpeechEngine() {
   console.log("[Speech] Per-queue MP3 engine ready.");
