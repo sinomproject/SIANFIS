@@ -305,12 +305,12 @@ const PublicDisplay = () => {
   if (displayMode === 'video' && externalVideoEmbedUrl) {
     return (
       <div style={{ width: '100vw', height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ pointerEvents: 'none', width: '100%', height: '100%' }}>
+        <div className="video-wrapper">
           <iframe src={externalVideoEmbedUrl}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
             allow="autoplay; encrypted-media"
             disablePictureInPicture
             title="Video Display" />
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }} />
         </div>
         {isAdmin && !isFullscreen && <AdminButtons navigate={navigate} handleLogout={handleLogout} />}
       </div>
@@ -556,30 +556,16 @@ const PublicDisplay = () => {
               overflow: 'hidden',
               boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
             }}>
-              {/* 177.78% width trick — video covers container at any aspect ratio */}
-              <iframe
-                src={youtubeEmbedUrl}
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  width: '177.78%',
-                  height: '100%',
-                  transform: 'translate(-50%, -50%)',
-                  border: 0,
-                  display: 'block',
-                }}
-                allow="autoplay; encrypted-media"
-                disablePictureInPicture
-                title="YouTube Playlist"
-              />
-              {/* Interaction blocker — prevents click, pause, fullscreen */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                zIndex: 10,
-                cursor: 'none',
-              }} />
+              <div className="video-wrapper" style={{ borderRadius: 16 }}>
+                <iframe
+                  src={youtubeEmbedUrl}
+                  style={{ transform: 'translate(-50%, -50%)', left: '50%', top: '50%', width: '177.78%' }}
+                  allow="autoplay; encrypted-media"
+                  disablePictureInPicture
+                  title="YouTube Playlist"
+                />
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, cursor: 'none' }} />
+              </div>
             </div>
           ) : (
             <StatsPanel stats={stats} />
@@ -687,6 +673,29 @@ const PublicDisplay = () => {
         @keyframes ticker {
           0%   { transform: translateX(100vw); }
           100% { transform: translateX(-100%); }
+        }
+        .video-wrapper {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          overflow: hidden;
+        }
+        .video-wrapper iframe {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100% !important;
+          height: 100% !important;
+          border: none;
+          pointer-events: none;
+        }
+        :fullscreen iframe,
+        :-webkit-full-screen iframe {
+          pointer-events: none !important;
+        }
+        :fullscreen .video-wrapper,
+        :-webkit-full-screen .video-wrapper {
+          pointer-events: none !important;
         }
       `}</style>
     </div>
