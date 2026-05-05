@@ -307,10 +307,8 @@ const PublicDisplay = () => {
       <div style={{ width: '100vw', height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
         <div className="video-wrapper">
           <iframe src={externalVideoEmbedUrl}
-            allow="autoplay; encrypted-media"
-            disablePictureInPicture
+            allow="autoplay"
             title="Video Display" />
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10 }} />
         </div>
         {isAdmin && !isFullscreen && <AdminButtons navigate={navigate} handleLogout={handleLogout} />}
       </div>
@@ -559,12 +557,9 @@ const PublicDisplay = () => {
               <div className="video-wrapper" style={{ borderRadius: 16 }}>
                 <iframe
                   src={youtubeEmbedUrl}
-                  style={{ transform: 'translate(-50%, -50%)', left: '50%', top: '50%', width: '177.78%' }}
-                  allow="autoplay; encrypted-media"
-                  disablePictureInPicture
+                  allow="autoplay"
                   title="YouTube Playlist"
                 />
-                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10, cursor: 'none' }} />
               </div>
             </div>
           ) : (
@@ -675,27 +670,19 @@ const PublicDisplay = () => {
           100% { transform: translateX(-100%); }
         }
         .video-wrapper {
+          position: relative;
           width: 100%;
           height: 100%;
-          position: relative;
           overflow: hidden;
+          background: #000;
         }
         .video-wrapper iframe {
           position: absolute;
-          top: 0;
-          left: 0;
-          width: 100% !important;
-          height: 100% !important;
+          top: -60px;
+          left: -80px;
+          width: calc(100% + 160px);
+          height: calc(100% + 120px);
           border: none;
-          pointer-events: none;
-        }
-        :fullscreen iframe,
-        :-webkit-full-screen iframe {
-          pointer-events: none !important;
-        }
-        :fullscreen .video-wrapper,
-        :-webkit-full-screen .video-wrapper {
-          pointer-events: none !important;
         }
       `}</style>
     </div>
