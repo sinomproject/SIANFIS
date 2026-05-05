@@ -8,11 +8,9 @@ let audioQueue = [];
 let isPlaying = false;
 
 async function processQueue() {
-  if (isPlaying) return;
-  if (audioQueue.length === 0) return;
+  if (isPlaying || audioQueue.length === 0) return;
 
   isPlaying = true;
-  window.__AUDIO_PLAYING__ = true;
 
   const queueNumber = audioQueue.shift();
 
@@ -27,21 +25,23 @@ async function processQueue() {
 
     await bell.play().catch(() => {});
 
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => {
+      bell.onended = resolve;
+      setTimeout(resolve, 1000);
+    });
 
     await main.play().catch(() => {});
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => {
+      main.onended = resolve;
+      setTimeout(resolve, 4000);
+    });
 
   } catch (e) {
     console.warn('[Audio error]', queueNumber, e);
   }
 
-  // delay antar antrian (ANTI TABRAKAN)
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
   isPlaying = false;
-  window.__AUDIO_PLAYING__ = false;
 
   processQueue();
 }
