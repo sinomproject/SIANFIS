@@ -305,10 +305,13 @@ const PublicDisplay = () => {
   if (displayMode === 'video' && externalVideoEmbedUrl) {
     return (
       <div style={{ width: '100vw', height: '100vh', background: '#000', position: 'relative', overflow: 'hidden' }}>
-        <iframe src={externalVideoEmbedUrl}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%',
-            border: 'none', pointerEvents: 'none' }}
-          allow="autoplay; encrypted-media" title="Video Display" />
+        <div style={{ pointerEvents: 'none', width: '100%', height: '100%' }}>
+          <iframe src={externalVideoEmbedUrl}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+            allow="autoplay; encrypted-media"
+            disablePictureInPicture
+            title="Video Display" />
+        </div>
         {isAdmin && !isFullscreen && <AdminButtons navigate={navigate} handleLogout={handleLogout} />}
       </div>
     );
@@ -567,6 +570,7 @@ const PublicDisplay = () => {
                   display: 'block',
                 }}
                 allow="autoplay; encrypted-media"
+                disablePictureInPicture
                 title="YouTube Playlist"
               />
               {/* Interaction blocker — prevents click, pause, fullscreen */}
