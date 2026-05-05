@@ -38,14 +38,33 @@ const PublicDisplay = () => {
   const [currentTime,        setCurrentTime]        = useState(new Date());
   const [lastCalledByCode,   setLastCalledByCode]   = useState({});
 
-  const lastQueueId        = useRef(new Set());
-  const playedRef          = useRef(new Set());
-  const pollingIntervalRef = useRef(null);
-  const speechInitialized  = useRef(false);
-  const unlockBtnRef       = useRef(null);
-  const triggerLock        = useRef(false);
+  const lastQueueId           = useRef(new Set());
+  const playedRef             = useRef(new Set());
+  const pollingIntervalRef    = useRef(null);
+  const speechInitialized     = useRef(false);
+  const unlockBtnRef          = useRef(null);
+  const displayQueueRef       = useRef([]);
+  const displayProcessingRef  = useRef(false);
 
   const isAdmin = localStorage.getItem('admin_token');
+
+  function processDisplayQueue() {
+    if (displayProcessingRef.current) return;
+    if (displayQueueRef.current.length === 0) return;
+
+    displayProcessingRef.current = true;
+
+    const queue = displayQueueRef.current.shift();
+
+    console.log('[DISPLAY QUEUE]', queue.queue_number);
+
+    playAntrian(queue.queue_number);
+
+    setTimeout(() => {
+      displayProcessingRef.current = false;
+      processDisplayQueue();
+    }, 2000);
+  }
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleLogout = () => {
@@ -166,10 +185,8 @@ const PublicDisplay = () => {
 
           console.log('[PLAY]', key);
 
-          if (triggerLock.current) return;
-          triggerLock.current = true;
-          playAntrian(queue.queue_number);
-          setTimeout(() => { triggerLock.current = false; }, 1500);
+          displayQueueRef.current.push(queue);
+          processDisplayQueue();
         });
 
         // Prevent unbounded Set growth
