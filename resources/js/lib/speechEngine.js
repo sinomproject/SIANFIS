@@ -5,58 +5,62 @@ if (window.__AUDIO_ENGINE_LOCK__) {
 }
 
 let audioQueue = [];
-let isPlaying = false;
+let processingPromise = null;
+let currentAudio = null;
 
 async function processQueue() {
-  if (isPlaying || audioQueue.length === 0) return;
+  if (processingPromise) return processingPromise;
 
-  isPlaying = true;
+  processingPromise = (async () => {
+    while (audioQueue.length > 0) {
+      const queueNumber = audioQueue.shift();
 
-  const queueNumber = audioQueue.shift();
+      const bell = new Audio('/storage/audio/bell.mp3');
+      const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  const bell = new Audio('/storage/audio/bell.mp3');
-  const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
+      try {
+        bell.load();
+        main.load();
 
-  try {
-    bell.load();
-    main.load();
+        console.log('[PLAY]', queueNumber);
 
-    console.log('[PLAY]', queueNumber);
+        if (currentAudio) {
+          try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) {}
+        }
 
-    await bell.play().catch(() => {});
+        currentAudio = bell;
+        await bell.play().catch(() => {});
 
-    await new Promise(resolve => {
-      bell.onended = resolve;
-      setTimeout(resolve, 1000);
-    });
+        await new Promise(resolve => {
+          bell.onended = resolve;
+          setTimeout(resolve, 1000);
+        });
 
-    await main.play().catch(() => {});
+        currentAudio = main;
+        await main.play().catch(() => {});
 
-    await new Promise(resolve => {
-      main.onended = resolve;
-      setTimeout(resolve, 4000);
-    });
+        await new Promise(resolve => {
+          main.onended = resolve;
+          setTimeout(resolve, 4000);
+        });
 
-  } catch (e) {
-    console.warn('[Audio error]', queueNumber, e);
-  }
+      } catch (e) {
+        console.warn('[Audio error]', queueNumber, e);
+      }
+    }
 
-  isPlaying = false;
+    currentAudio = null;
+    processingPromise = null;
+  })();
 
-  processQueue();
+  return processingPromise;
 }
 
 export function playAntrian(queueNumber) {
   if (!queueNumber) return;
 
-  // GLOBAL LOCK (ANTI DOUBLE TRIGGER)
-  if (window.__AUDIO_PLAYING__) {
-    audioQueue.push(queueNumber);
-    console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
-    return;
-  }
-
   audioQueue.push(queueNumber);
+
   console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
 
   processQueue();
