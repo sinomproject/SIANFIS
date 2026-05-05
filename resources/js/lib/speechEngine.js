@@ -1,3 +1,9 @@
+if (window.__AUDIO_ENGINE_LOCK__) {
+  console.warn('[Audio] Engine already initialized, skip duplicate');
+} else {
+  window.__AUDIO_ENGINE_LOCK__ = true;
+}
+
 let audioQueue = [];
 let isPlaying = false;
 
@@ -6,6 +12,7 @@ async function processQueue() {
   if (audioQueue.length === 0) return;
 
   isPlaying = true;
+  window.__AUDIO_PLAYING__ = true;
 
   const queueNumber = audioQueue.shift();
 
@@ -34,6 +41,7 @@ async function processQueue() {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   isPlaying = false;
+  window.__AUDIO_PLAYING__ = false;
 
   processQueue();
 }
@@ -41,8 +49,14 @@ async function processQueue() {
 export function playAntrian(queueNumber) {
   if (!queueNumber) return;
 
-  audioQueue.push(queueNumber);
+  // GLOBAL LOCK (ANTI DOUBLE TRIGGER)
+  if (window.__AUDIO_PLAYING__) {
+    audioQueue.push(queueNumber);
+    console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
+    return;
+  }
 
+  audioQueue.push(queueNumber);
   console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
 
   processQueue();
