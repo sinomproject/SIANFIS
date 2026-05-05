@@ -6,7 +6,6 @@ if (window.__AUDIO_ENGINE_LOCK__) {
 
 let audioQueue = [];
 let processingPromise = null;
-let currentAudio = null;
 
 async function processQueue() {
   if (processingPromise) return processingPromise;
@@ -24,11 +23,6 @@ async function processQueue() {
 
         console.log('[PLAY]', queueNumber);
 
-        if (currentAudio) {
-          try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) {}
-        }
-
-        currentAudio = bell;
         await bell.play().catch(() => {});
 
         await new Promise(resolve => {
@@ -36,12 +30,17 @@ async function processQueue() {
           setTimeout(resolve, 1000);
         });
 
-        currentAudio = main;
         await main.play().catch(() => {});
 
         await new Promise(resolve => {
           main.onended = resolve;
-          setTimeout(resolve, 4000);
+
+          main.onloadedmetadata = () => {
+            const duration = (main.duration || 3) * 1000;
+            setTimeout(resolve, duration + 200);
+          };
+
+          setTimeout(resolve, 6000);
         });
 
       } catch (e) {
@@ -49,7 +48,6 @@ async function processQueue() {
       }
     }
 
-    currentAudio = null;
     processingPromise = null;
   })();
 
