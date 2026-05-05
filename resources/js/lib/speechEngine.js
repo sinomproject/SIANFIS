@@ -1,8 +1,9 @@
 let audioQueue = [];
 let isPlaying = false;
 
-function processQueue() {
-  if (isPlaying || audioQueue.length === 0) return;
+async function processQueue() {
+  if (isPlaying) return;
+  if (audioQueue.length === 0) return;
 
   isPlaying = true;
 
@@ -11,26 +12,30 @@ function processQueue() {
   const bell = new Audio('/storage/audio/bell.mp3');
   const main = new Audio(`/storage/audio/${queueNumber.toLowerCase()}.mp3`);
 
-  bell.load();
-  main.load();
+  try {
+    bell.load();
+    main.load();
 
-  console.log('[PLAY]', queueNumber);
+    console.log('[PLAY]', queueNumber);
 
-  // play bell
-  bell.play().catch(() => {});
+    await bell.play().catch(() => {});
 
-  // play main setelah bell
-  setTimeout(() => {
-    main.play().catch(() => {
-      console.warn('[Audio error]', queueNumber);
-    });
-  }, 700);
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    await main.play().catch(() => {});
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+  } catch (e) {
+    console.warn('[Audio error]', queueNumber, e);
+  }
 
   // delay antar antrian (ANTI TABRAKAN)
-  setTimeout(() => {
-    isPlaying = false;
-    processQueue();
-  }, 3000);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  isPlaying = false;
+
+  processQueue();
 }
 
 export function playAntrian(queueNumber) {
@@ -40,9 +45,7 @@ export function playAntrian(queueNumber) {
 
   console.log('[QUEUE]', queueNumber, 'LEN:', audioQueue.length);
 
-  if (!isPlaying) {
-    processQueue();
-  }
+  processQueue();
 }
 
 export async function unlockAudioSystem() {
