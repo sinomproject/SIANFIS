@@ -43,6 +43,7 @@ const PublicDisplay = () => {
   const pollingIntervalRef = useRef(null);
   const speechInitialized  = useRef(false);
   const unlockBtnRef       = useRef(null);
+  const triggerLock        = useRef(false);
 
   const isAdmin = localStorage.getItem('admin_token');
 
@@ -164,7 +165,11 @@ const PublicDisplay = () => {
           playedRef.current.add(key);
 
           console.log('[PLAY]', key);
+
+          if (triggerLock.current) return;
+          triggerLock.current = true;
           playAntrian(queue.queue_number);
+          setTimeout(() => { triggerLock.current = false; }, 1500);
         });
 
         // Prevent unbounded Set growth
